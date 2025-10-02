@@ -3,13 +3,25 @@ services:
     image: postgres:15
     container_name: postgres_db
     environment:
-      POSTGRES_DB: projectdb
-      POSTGRES_USER: dbuser
-      POSTGRES_PASSWORD: dbpassword
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "5432:5432"
+      - "${DB_EXTERNAL_PORT}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  whodb:
+    image: clidey/whodb
+    ports:
+      - "${WHODB_PORT}:8080"
+    environment:
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
+    depends_on:
+      - postgres
     networks:
       - app-network
     restart: unless-stopped
@@ -19,14 +31,14 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     ports:
-      - "8080:8080"
+      - "${BACKEND_PORT}:8080"
     environment:
-      - GO_ENV=production
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_NAME=projectdb
-      - DB_USER=dbuser
-      - DB_PASSWORD=dbpassword
+      - GO_ENV=${GO_ENV}
+      - DB_HOST=${POSTGRES_HOST}
+      - DB_PORT=${POSTGRES_PORT}
+      - DB_NAME=${POSTGRES_DB}
+      - DB_USER=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
     depends_on:
       - postgres
     networks:
@@ -38,10 +50,10 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     ports:
-      - "3000:3000"
+      - "${FRONTEND_PORT}:3000"
     environment:
-      - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=http://backend:8080
+      - NODE_ENV=${NODE_ENV}
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
     depends_on:
       - backend
     networks:
