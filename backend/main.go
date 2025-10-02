@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/gin-contrib/cors"
@@ -8,6 +9,12 @@ import (
 )
 
 func main() {
+	// Initialize database connection
+	if err := InitDatabase(); err != nil {
+		log.Fatalf("Failed to initialize database: %v", err)
+	}
+	defer CloseDatabase()
+
 	r := gin.Default()
 
 	// Configure CORS
@@ -20,8 +27,9 @@ func main() {
 	// Health check endpoint
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
-			"status":  "healthy",
-			"message": "Backend API is running",
+			"status":   "healthy",
+			"message":  "Backend API is running",
+			"database": "connected",
 		})
 	})
 
