@@ -1,27 +1,9 @@
-// @title           Backend API
-// @version         1.0
-// @description     This is the backend API server for the project.
-// @termsOfService  http://swagger.io/terms/
-
-// @contact.name   API Support
-// @contact.url    http://www.swagger.io/support
-// @contact.email  support@swagger.io
-
-// @license.name  Apache 2.0
-// @license.url   http://www.apache.org/licenses/LICENSE-2.0.html
-
-// @host      localhost:8080
-// @BasePath  /api/v1
-
-// @securityDefinitions.basic  BasicAuth
-
-// @externalDocs.description  OpenAPI
-// @externalDocs.url          https://swagger.io/resources/open-api/
 package main
 
 import (
 	"backend/src/config"
 	"backend/src/controllers"
+	"backend/src/routes"
 	"log"
 	"net/http"
 
@@ -58,7 +40,13 @@ func main() {
 	// Health check endpoint
 	r.GET("/health", controllers.HealthHandler)
 
-	// API v1 routes
+	// Initialize controllers
+	authController := controllers.NewAuthController()
+
+	// Setup authentication routes
+	routes.SetupAuthRoutes(r, authController)
+
+	// API v1 routes (existing routes)
 	v1 := r.Group("/api/v1")
 	{
 		v1.GET("/", controllers.WelcomeHandler)

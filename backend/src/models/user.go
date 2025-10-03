@@ -19,10 +19,10 @@ type User struct {
 	DisplayName  string         `json:"display_name" gorm:"size:150"`
 	DateOfBirth  *time.Time     `json:"date_of_birth" gorm:"type:date"`
 	Bio          string         `json:"bio" gorm:"type:text"`
-	Role         string         `json:"role" gorm:"default:user;size:50"`
 	City         string         `json:"city" gorm:"size:100"`
 	Country      string         `json:"country" gorm:"size:100"`
-	AvatarURL    string         `json:"avatar_url" gorm:"size:512"`
+	AvatarData   []byte         `json:"-" gorm:"type:bytea"`
+	AvatarType   string         `json:"avatar_type" gorm:"size:50"`
 	Sports       []Sport        `json:"sports" gorm:"many2many:user_sports;"`
 	CreatedAt    time.Time      `json:"created_at"`
 	UpdatedAt    time.Time      `json:"updated_at"`
