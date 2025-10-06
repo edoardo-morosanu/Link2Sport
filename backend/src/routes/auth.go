@@ -16,6 +16,12 @@ func SetupAuthRoutes(router *gin.Engine, authController *controllers.AuthControl
 
 		// POST /api/auth/login
 		authGroup.POST("/login", authController.Login)
+
+		// POST /api/auth/check-email
+		authGroup.POST("/check-email", authController.CheckEmail)
+
+		// POST /api/auth/check-username
+		authGroup.POST("/check-username", authController.CheckUsername)
 	}
 }
 
