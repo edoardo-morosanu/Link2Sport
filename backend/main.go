@@ -1,29 +1,13 @@
-// @title           Backend API
-// @version         1.0
-// @description     This is the backend API server for the project.
-// @termsOfService  http://swagger.io/terms/
-
-// @contact.name   API Support
-// @contact.url    http://www.swagger.io/support
-// @contact.email  support@swagger.io
-
-// @license.name  Apache 2.0
-// @license.url   http://www.apache.org/licenses/LICENSE-2.0.html
-
-// @host      localhost:8080
-// @BasePath  /api/v1
-
-// @securityDefinitions.basic  BasicAuth
-
-// @externalDocs.description  OpenAPI
-// @externalDocs.url          https://swagger.io/resources/open-api/
 package main
 
 import (
 	"backend/src/config"
 	"backend/src/controllers"
+	"backend/src/models"
+	"backend/src/routes"
 	"log"
 	"net/http"
+	"time"
 
 	_ "backend/docs"
 
@@ -40,14 +24,22 @@ func main() {
 	}
 	defer config.CloseDatabase()
 
+	// Run database migrations
+	if err := config.AutoMigrate(&models.User{}); err != nil {
+		log.Fatalf("Failed to migrate database: %v", err)
+	}
+
 	r := gin.Default()
 
 	// Configure CORS
-	corsConfig := cors.DefaultConfig()
-	corsConfig.AllowOrigins = []string{"http://localhost:3000"}
-	corsConfig.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
-	corsConfig.AllowHeaders = []string{"Origin", "Content-Type", "Authorization"}
-	r.Use(cors.New(corsConfig))
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:3000", "http://127.0.0.1:3000"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
 
 	// Swagger endpoints
 	r.GET("/docs", func(c *gin.Context) {
@@ -58,7 +50,17 @@ func main() {
 	// Health check endpoint
 	r.GET("/health", controllers.HealthHandler)
 
-	// API v1 routes
+	// Initialize controllers
+	authController := controllers.NewAuthController()
+	profileController := controllers.NewProfileController()
+	uploadController := controllers.NewUploadController()
+
+	// Setup routes
+	routes.SetupAuthRoutes(r, authController)
+	routes.SetupProfileRoutes(r, profileController)
+	routes.SetupUploadRoutes(r, uploadController)
+
+	// API v1 routes (existing routes)
 	v1 := r.Group("/api/v1")
 	{
 		v1.GET("/", controllers.WelcomeHandler)
