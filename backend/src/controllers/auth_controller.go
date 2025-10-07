@@ -5,7 +5,9 @@ import (
 	"backend/src/models"
 	"backend/src/types"
 	"backend/src/utils"
+	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
@@ -226,31 +228,113 @@ func (ac *AuthController) Login(c *gin.Context) {
 // FieldAvailabilityConfig holds configuration for field availability checks
 type FieldAvailabilityConfig struct {
 	DBColumn        string
+	ValidationTag   string
 	ConflictError   string
 	ConflictMessage string
 	SuccessMessage  string
 	ResponseKey     string
 }
 
-// checkFieldAvailability is a generic function to check if a field value is available
-func (ac *AuthController) checkFieldAvailability(c *gin.Context, value string, availabilityConfig FieldAvailabilityConfig) {
+// fieldConfigs defines the configuration for different field types
+var fieldConfigs = map[string]FieldAvailabilityConfig{
+	"email": {
+		DBColumn:        "email",
+		ValidationTag:   "required,email",
+		ConflictError:   "Email already exists",
+		ConflictMessage: "An account with this email already exists",
+		SuccessMessage:  "Email is available",
+		ResponseKey:     "email",
+	},
+	"username": {
+		DBColumn:        "username",
+		ValidationTag:   "required",
+		ConflictError:   "Username already exists",
+		ConflictMessage: "This username is already taken. Please choose a different one.",
+		SuccessMessage:  "Username is available",
+		ResponseKey:     "username",
+	},
+}
+
+// handleFieldAvailabilityCheck is a generic handler for field availability checks
+func (ac *AuthController) handleFieldAvailabilityCheck(c *gin.Context, fieldType string) {
+	fieldConfig, exists := fieldConfigs[fieldType]
+	if !exists {
+		c.JSON(http.StatusInternalServerError, types.ErrorResponse{
+			Error:   "Configuration error",
+			Message: "Invalid field type",
+		})
+		return
+	}
+
+	// Parse the request dynamically based on field type
+	requestBody := map[string]interface{}{}
+	if err := c.ShouldBindJSON(&requestBody); err != nil {
+		c.JSON(http.StatusBadRequest, types.ErrorResponse{
+			Error:   "Invalid request format",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	// Extract the field value
+	fieldValue, exists := requestBody[fieldType]
+	if !exists {
+		c.JSON(http.StatusBadRequest, types.ErrorResponse{
+			Error:   "Missing field",
+			Message: fmt.Sprintf("Field '%s' is required", fieldType),
+		})
+		return
+	}
+
+	value, ok := fieldValue.(string)
+	if !ok {
+		c.JSON(http.StatusBadRequest, types.ErrorResponse{
+			Error:   "Invalid field type",
+			Message: fmt.Sprintf("Field '%s' must be a string", fieldType),
+		})
+		return
+	}
+
+	// Basic validation
+	if fieldType == "email" && !isValidEmail(value) {
+		c.JSON(http.StatusBadRequest, types.ErrorResponse{
+			Error:   "Invalid email format",
+			Message: "Please provide a valid email address",
+		})
+		return
+	}
+
+	if strings.TrimSpace(value) == "" {
+		c.JSON(http.StatusBadRequest, types.ErrorResponse{
+			Error:   "Empty field",
+			Message: fmt.Sprintf("Field '%s' cannot be empty", fieldType),
+		})
+		return
+	}
+
+	// Check availability in database
 	var existingUser models.User
-	query := availabilityConfig.DBColumn + " = ?"
+	query := fieldConfig.DBColumn + " = ?"
 
 	if err := config.DB.Where(query, value).First(&existingUser).Error; err == nil {
 		c.JSON(http.StatusConflict, types.ErrorResponse{
-			Error:   availabilityConfig.ConflictError,
-			Message: availabilityConfig.ConflictMessage,
+			Error:   fieldConfig.ConflictError,
+			Message: fieldConfig.ConflictMessage,
 		})
 		return
 	}
 
 	// Field is available
 	response := gin.H{
-		"message":                      availabilityConfig.SuccessMessage,
-		availabilityConfig.ResponseKey: value,
+		"message":               fieldConfig.SuccessMessage,
+		fieldConfig.ResponseKey: value,
 	}
 	c.JSON(http.StatusOK, response)
+}
+
+// isValidEmail performs basic email validation
+func isValidEmail(email string) bool {
+	return strings.Contains(email, "@") && strings.Contains(email, ".")
 }
 
 // CheckEmail godoc
@@ -265,27 +349,7 @@ func (ac *AuthController) checkFieldAvailability(c *gin.Context, value string, a
 // @Failure      409 {object} types.ErrorResponse "Email already exists"
 // @Router       /auth/check-email [post]
 func (ac *AuthController) CheckEmail(c *gin.Context) {
-	var req struct {
-		Email string `json:"email" binding:"required,email"`
-	}
-
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, types.ErrorResponse{
-			Error:   "Invalid request format",
-			Message: err.Error(),
-		})
-		return
-	}
-
-	availabilityConfig := FieldAvailabilityConfig{
-		DBColumn:        "email",
-		ConflictError:   "Email already exists",
-		ConflictMessage: "An account with this email already exists",
-		SuccessMessage:  "Email is available",
-		ResponseKey:     "email",
-	}
-
-	ac.checkFieldAvailability(c, req.Email, availabilityConfig)
+	ac.handleFieldAvailabilityCheck(c, "email")
 }
 
 // CheckUsername godoc
@@ -300,25 +364,5 @@ func (ac *AuthController) CheckEmail(c *gin.Context) {
 // @Failure      409 {object} types.ErrorResponse "Username already exists"
 // @Router       /auth/check-username [post]
 func (ac *AuthController) CheckUsername(c *gin.Context) {
-	var req struct {
-		Username string `json:"username" binding:"required"`
-	}
-
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, types.ErrorResponse{
-			Error:   "Invalid request format",
-			Message: err.Error(),
-		})
-		return
-	}
-
-	availabilityConfig := FieldAvailabilityConfig{
-		DBColumn:        "username",
-		ConflictError:   "Username already exists",
-		ConflictMessage: "This username is already taken. Please choose a different one.",
-		SuccessMessage:  "Username is available",
-		ResponseKey:     "username",
-	}
-
-	ac.checkFieldAvailability(c, req.Username, availabilityConfig)
+	ac.handleFieldAvailabilityCheck(c, "username")
 }
