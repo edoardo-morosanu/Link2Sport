@@ -17,6 +17,49 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
+// @title           Link2Sport API
+// @version         1.0
+// @description     A comprehensive API for connecting sports enthusiasts, managing profiles, and facilitating sports-related activities.
+// @description     This API provides authentication, user profile management, search functionality, and file upload capabilities.
+// @termsOfService  http://swagger.io/terms/
+
+// @contact.name   API Support
+// @contact.url    http://www.swagger.io/support
+// @contact.email  support@swagger.io
+
+// @license.name  Apache 2.0
+// @license.url   http://www.apache.org/licenses/LICENSE-2.0.html
+
+// @host      localhost:8080
+// @BasePath  /api
+// @schemes   http https
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and JWT token.
+
+// @tag.name Authentication
+// @tag.description User authentication and registration endpoints
+
+// @tag.name Profile
+// @tag.description User profile management endpoints
+
+// @tag.name Search
+// @tag.description User search functionality
+
+// @tag.name Upload
+// @tag.description File upload and avatar management
+
+// @tag.name Health
+// @tag.description API health and status endpoints
+
+// @tag.name General
+// @tag.description General API information endpoints
+
+// @externalDocs.description  Link2Sport Documentation
+// @externalDocs.url          https://swagger.io/resources/open-api/
+
 func main() {
 	// Initialize database connection
 	if err := config.InitDatabase(); err != nil {

@@ -1,79 +1,922 @@
 {
-    "swagger": "2.0",
-    "info": {
-        "description": "This is the backend API server for the project.",
-        "title": "Backend API",
-        "termsOfService": "http://swagger.io/terms/",
-        "contact": {
-            "name": "API Support",
-            "url": "http://www.swagger.io/support",
-            "email": "support@swagger.io"
-        },
-        "license": {
-            "name": "Apache 2.0",
-            "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
-        },
-        "version": "1.0"
+  "schemes": ["http", "https"],
+  "swagger": "2.0",
+  "info": {
+    "description": "A comprehensive API for connecting sports enthusiasts, managing profiles, and facilitating sports-related activities.\nThis API provides authentication, user profile management, search functionality, and file upload capabilities.",
+    "title": "Link2Sport API",
+    "termsOfService": "http://swagger.io/terms/",
+    "contact": {
+      "name": "API Support",
+      "url": "http://www.swagger.io/support",
+      "email": "support@swagger.io"
     },
-    "host": "localhost:8080",
-    "basePath": "/api/v1",
-    "paths": {
-        "/": {
-            "get": {
-                "description": "Get welcome message for API v1",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "general"
-                ],
-                "summary": "Welcome message",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
+    "license": {
+      "name": "Apache 2.0",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+    },
+    "version": "1.0"
+  },
+  "host": "localhost:8080",
+  "basePath": "/api",
+  "paths": {
+    "/api/v1/": {
+      "get": {
+        "description": "Get welcome message and version information for the Sport Connect API",
+        "consumes": ["application/json"],
+        "produces": ["application/json"],
+        "tags": ["General"],
+        "summary": "API welcome message",
+        "responses": {
+          "200": {
+            "description": "Welcome message and API version\" example({\"message\": \"Welcome to the API\", \"version\": \"1.0.0\"})",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string"
+                },
+                "version": {
+                  "type": "string"
                 }
+              }
             }
-        },
-        "/health": {
-            "get": {
-                "description": "Get the health status of the API",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "health"
-                ],
-                "summary": "Health check",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
+          }
+        }
+      }
+    },
+    "/auth/check-email": {
+      "post": {
+        "description": "Verify if an email address is available for registration",
+        "consumes": ["application/json"],
+        "produces": ["application/json"],
+        "tags": ["Authentication"],
+        "summary": "Check email availability",
+        "parameters": [
+          {
+            "description": "Email to check",
+            "name": "email",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "email": {
+                  "type": "string"
                 }
+              }
             }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Email is available\" example({\"message\": \"Email is available\", \"email\": \"user@example.com\"})",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "email": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request format or email format",
+            "schema": {
+              "$ref": "#/definitions/types.ErrorResponse"
+            }
+          },
+          "409": {
+            "description": "Email already exists",
+            "schema": {
+              "$ref": "#/definitions/types.ErrorResponse"
+            }
+          }
         }
+      }
     },
-    "securityDefinitions": {
-        "BasicAuth": {
-            "type": "basic"
+    "/auth/check-username": {
+      "post": {
+        "description": "Verify if a username is available for registration",
+        "consumes": ["application/json"],
+        "produces": ["application/json"],
+        "tags": ["Authentication"],
+        "summary": "Check username availability",
+        "parameters": [
+          {
+            "description": "Username to check",
+            "name": "username",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "username": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Username is available\" example({\"message\": \"Username is available\", \"username\": \"johndoe\"})",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string"
+                },
+                "username": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request format",
+            "schema": {
+              "$ref": "#/definitions/types.ErrorResponse"
+            }
+          },
+          "409": {
+            "description": "Username already exists",
+            "schema": {
+              "$ref": "#/definitions/types.ErrorResponse"
+            }
+          }
         }
+      }
     },
-    "externalDocs": {
-        "description": "OpenAPI",
-        "url": "https://swagger.io/resources/open-api/"
+    "/auth/login": {
+      "post": {
+        "description": "Authenticate user with email and password, returns JWT token",
+        "consumes": ["application/json"],
+        "produces": ["application/json"],
+        "tags": ["Authentication"],
+        "summary": "User login",
+        "parameters": [
+          {
+            "description": "User login credentials",
+            "name": "credentials",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/types.LoginRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Login successful with JWT token",
+            "schema": {
+              "$ref": "#/definitions/types.AuthResponse"
+            }
+          },
+          "400": {
+            "description": "Invalid request format",
+            "schema": {
+              "$ref": "#/definitions/types.ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "Invalid credentials",
+            "schema": {
+              "$ref": "#/definitions/types.ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Database error or token generation failed",
+            "schema": {
+              "$ref": "#/definitions/types.ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/auth/register": {
+      "post": {
+        "description": "Create a new user account with profile information and associated sports",
+        "consumes": ["application/json"],
+        "produces": ["application/json"],
+        "tags": ["Authentication"],
+        "summary": "Register a new user",
+        "parameters": [
+          {
+            "description": "User registration data",
+            "name": "request",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/types.RegisterRequest"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "User successfully registered",
+            "schema": {
+              "$ref": "#/definitions/types.AuthResponse"
+            }
+          },
+          "400": {
+            "description": "Invalid request format or password mismatch",
+            "schema": {
+              "$ref": "#/definitions/types.ErrorResponse"
+            }
+          },
+          "409": {
+            "description": "Username already taken",
+            "schema": {
+              "$ref": "#/definitions/types.ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/types.ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "description": "Get the health status of the API and database connection",
+        "consumes": ["application/json"],
+        "produces": ["application/json"],
+        "tags": ["Health"],
+        "summary": "Health check",
+        "responses": {
+          "200": {
+            "description": "API health status\" example({\"status\": \"healthy\", \"message\": \"Backend API is running\", \"database\": \"connected\"})",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "database": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/profile": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Retrieve the authenticated user's complete profile information including sports and avatar",
+        "consumes": ["application/json"],
+        "produces": ["application/json"],
+        "tags": ["Profile"],
+        "summary": "Get current user's profile",
+        "responses": {
+          "200": {
+            "description": "User profile information",
+            "schema": {
+              "$ref": "#/definitions/types.ProfileResponse"
+            }
+          },
+          "401": {
+            "description": "User not authenticated",
+            "schema": {
+              "$ref": "#/definitions/types.ErrorResponse"
+            }
+          },
+          "404": {
+            "description": "Profile not found",
+            "schema": {
+              "$ref": "#/definitions/types.ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/profile/{id}": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Retrieve another user's public profile information by user ID",
+        "consumes": ["application/json"],
+        "produces": ["application/json"],
+        "tags": ["Profile"],
+        "summary": "Get public user profile",
+        "parameters": [
+          {
+            "type": "integer",
+            "example": 12345,
+            "description": "User ID",
+            "name": "id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Public profile information",
+            "schema": {
+              "$ref": "#/definitions/types.PublicProfileResponse"
+            }
+          },
+          "400": {
+            "description": "Invalid user ID or trying to access own profile",
+            "schema": {
+              "$ref": "#/definitions/types.ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "User not authenticated",
+            "schema": {
+              "$ref": "#/definitions/types.ErrorResponse"
+            }
+          },
+          "404": {
+            "description": "Profile not found",
+            "schema": {
+              "$ref": "#/definitions/types.ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/search/users": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Search for other users by username or display name with pagination",
+        "consumes": ["application/json"],
+        "produces": ["application/json"],
+        "tags": ["Search"],
+        "summary": "Search for users",
+        "parameters": [
+          {
+            "minLength": 2,
+            "type": "string",
+            "example": "\"john\"",
+            "description": "Search query (minimum 2 characters)",
+            "name": "query",
+            "in": "query",
+            "required": true
+          },
+          {
+            "maximum": 50,
+            "minimum": 1,
+            "type": "integer",
+            "default": 10,
+            "example": 10,
+            "description": "Number of results per page (1-50)",
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "minimum": 0,
+            "type": "integer",
+            "default": 0,
+            "example": 0,
+            "description": "Number of results to skip",
+            "name": "offset",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Search results with pagination info",
+            "schema": {
+              "$ref": "#/definitions/types.SearchUsersResponse"
+            }
+          },
+          "400": {
+            "description": "Invalid request or query too short",
+            "schema": {
+              "$ref": "#/definitions/types.ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "User not authenticated",
+            "schema": {
+              "$ref": "#/definitions/types.ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Database error",
+            "schema": {
+              "$ref": "#/definitions/types.ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/upload/avatar": {
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Upload a new avatar image for the authenticated user. Accepts JPEG, PNG, GIF, and WebP formats. Maximum file size is 5MB.",
+        "consumes": ["multipart/form-data"],
+        "produces": ["application/json"],
+        "tags": ["Upload"],
+        "summary": "Upload user avatar",
+        "parameters": [
+          {
+            "type": "file",
+            "description": "Avatar image file (JPEG, PNG, GIF, WebP, max 5MB)",
+            "name": "avatar",
+            "in": "formData",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Avatar uploaded successfully",
+            "schema": {
+              "$ref": "#/definitions/types.UploadResponse"
+            }
+          },
+          "400": {
+            "description": "No file uploaded or invalid file format",
+            "schema": {
+              "$ref": "#/definitions/types.FileUploadError"
+            }
+          },
+          "401": {
+            "description": "User not authenticated",
+            "schema": {
+              "$ref": "#/definitions/types.FileUploadError"
+            }
+          },
+          "404": {
+            "description": "User not found",
+            "schema": {
+              "$ref": "#/definitions/types.FileUploadError"
+            }
+          },
+          "500": {
+            "description": "File processing or database error",
+            "schema": {
+              "$ref": "#/definitions/types.FileUploadError"
+            }
+          }
+        }
+      },
+      "delete": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Remove the current user's custom avatar image, reverting to default avatar",
+        "consumes": ["application/json"],
+        "produces": ["application/json"],
+        "tags": ["Upload"],
+        "summary": "Delete user avatar",
+        "responses": {
+          "200": {
+            "description": "Avatar deleted successfully",
+            "schema": {
+              "$ref": "#/definitions/types.UploadResponse"
+            }
+          },
+          "400": {
+            "description": "No avatar to delete",
+            "schema": {
+              "$ref": "#/definitions/types.FileUploadError"
+            }
+          },
+          "401": {
+            "description": "User not authenticated",
+            "schema": {
+              "$ref": "#/definitions/types.FileUploadError"
+            }
+          },
+          "404": {
+            "description": "User not found",
+            "schema": {
+              "$ref": "#/definitions/types.FileUploadError"
+            }
+          },
+          "500": {
+            "description": "Database error",
+            "schema": {
+              "$ref": "#/definitions/types.FileUploadError"
+            }
+          }
+        }
+      }
+    },
+    "/user/{userId}/avatar": {
+      "get": {
+        "description": "Retrieve a user's avatar image by user ID. Returns custom uploaded avatar or redirects to default avatar",
+        "consumes": ["application/json"],
+        "produces": ["image/jpeg", "image/png", "image/gif", "image/webp"],
+        "tags": ["Upload"],
+        "summary": "Get user avatar",
+        "parameters": [
+          {
+            "type": "integer",
+            "example": 12345,
+            "description": "User ID",
+            "name": "userId",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User's avatar image",
+            "schema": {
+              "type": "string"
+            }
+          },
+          "302": {
+            "description": "Redirect to default avatar",
+            "schema": {
+              "type": "string"
+            }
+          },
+          "400": {
+            "description": "User ID is required",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No avatar found",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
     }
+  },
+  "definitions": {
+    "types.AuthResponse": {
+      "description": "Authentication response payload",
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string",
+          "example": "Login successful"
+        },
+        "token": {
+          "type": "string",
+          "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        },
+        "user_id": {
+          "type": "integer",
+          "example": 12345
+        }
+      }
+    },
+    "types.ErrorResponse": {
+      "description": "Error response payload",
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "example": "Invalid credentials"
+        },
+        "message": {
+          "type": "string",
+          "example": "Email or password is incorrect"
+        }
+      }
+    },
+    "types.FileUploadError": {
+      "description": "File upload error response payload",
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "example": "Invalid file"
+        },
+        "error_code": {
+          "type": "string",
+          "example": "FILE_TOO_LARGE"
+        },
+        "message": {
+          "type": "string",
+          "example": "File size exceeds maximum limit of 5MB"
+        }
+      }
+    },
+    "types.LoginRequest": {
+      "description": "User login request payload",
+      "type": "object",
+      "required": ["email", "password"],
+      "properties": {
+        "email": {
+          "type": "string",
+          "example": "user@example.com"
+        },
+        "password": {
+          "type": "string",
+          "example": "securePassword123!"
+        }
+      }
+    },
+    "types.ProfileResponse": {
+      "description": "User profile response payload (authenticated user's own profile)",
+      "type": "object",
+      "properties": {
+        "avatar_url": {
+          "type": "string",
+          "example": "/api/user/12345/avatar"
+        },
+        "bio": {
+          "type": "string",
+          "example": "I love playing sports and meeting new people!"
+        },
+        "city": {
+          "type": "string",
+          "example": "New York"
+        },
+        "country": {
+          "type": "string",
+          "example": "USA"
+        },
+        "created_at": {
+          "type": "string",
+          "example": "2024-01-15T10:30:00Z"
+        },
+        "display_name": {
+          "type": "string",
+          "example": "John Doe"
+        },
+        "email": {
+          "type": "string",
+          "example": "user@example.com"
+        },
+        "has_avatar": {
+          "type": "boolean",
+          "example": true
+        },
+        "id": {
+          "type": "integer",
+          "example": 12345
+        },
+        "sports": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "example": ["[\"football\"", "\"basketball\"]"]
+        },
+        "updated_at": {
+          "type": "string",
+          "example": "2024-01-20T14:45:00Z"
+        },
+        "username": {
+          "type": "string",
+          "example": "johndoe"
+        }
+      }
+    },
+    "types.PublicProfileResponse": {
+      "description": "Public profile response payload (other users' profiles)",
+      "type": "object",
+      "properties": {
+        "avatar_url": {
+          "type": "string",
+          "example": "/api/user/12345/avatar"
+        },
+        "bio": {
+          "type": "string",
+          "example": "I love playing sports and meeting new people!"
+        },
+        "city": {
+          "type": "string",
+          "example": "New York"
+        },
+        "country": {
+          "type": "string",
+          "example": "USA"
+        },
+        "created_at": {
+          "type": "string",
+          "example": "2024-01-15T10:30:00Z"
+        },
+        "display_name": {
+          "type": "string",
+          "example": "John Doe"
+        },
+        "has_avatar": {
+          "type": "boolean",
+          "example": true
+        },
+        "id": {
+          "type": "integer",
+          "example": 12345
+        },
+        "is_following": {
+          "type": "boolean",
+          "example": false
+        },
+        "sports": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "example": ["[\"football\"", "\"basketball\"]"]
+        },
+        "updated_at": {
+          "type": "string",
+          "example": "2024-01-20T14:45:00Z"
+        },
+        "username": {
+          "type": "string",
+          "example": "johndoe"
+        }
+      }
+    },
+    "types.RegisterRequest": {
+      "description": "User registration request payload",
+      "type": "object",
+      "required": [
+        "confirm_password",
+        "email",
+        "first_name",
+        "last_name",
+        "location",
+        "password",
+        "sports",
+        "username"
+      ],
+      "properties": {
+        "bio": {
+          "type": "string",
+          "example": "I love playing sports and meeting new people!"
+        },
+        "confirm_password": {
+          "type": "string",
+          "example": "securePassword123!"
+        },
+        "email": {
+          "type": "string",
+          "example": "user@example.com"
+        },
+        "first_name": {
+          "type": "string",
+          "example": "John"
+        },
+        "last_name": {
+          "type": "string",
+          "example": "Doe"
+        },
+        "location": {
+          "type": "string",
+          "example": "New York, NY"
+        },
+        "password": {
+          "type": "string",
+          "minLength": 8,
+          "example": "securePassword123!"
+        },
+        "sports": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          },
+          "example": ["[\"football\"", "\"basketball\"]"]
+        },
+        "username": {
+          "type": "string",
+          "example": "johndoe"
+        }
+      }
+    },
+    "types.SearchUserResult": {
+      "description": "Individual user search result",
+      "type": "object",
+      "properties": {
+        "avatar_url": {
+          "type": "string",
+          "example": "/api/user/12345/avatar"
+        },
+        "display_name": {
+          "type": "string",
+          "example": "John Doe"
+        },
+        "has_avatar": {
+          "type": "boolean",
+          "example": true
+        },
+        "id": {
+          "type": "integer",
+          "example": 12345
+        },
+        "username": {
+          "type": "string",
+          "example": "johndoe"
+        }
+      }
+    },
+    "types.SearchUsersResponse": {
+      "description": "User search response with pagination",
+      "type": "object",
+      "properties": {
+        "has_more": {
+          "type": "boolean",
+          "example": true
+        },
+        "total": {
+          "type": "integer",
+          "example": 25
+        },
+        "users": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/types.SearchUserResult"
+          }
+        }
+      }
+    },
+    "types.UploadResponse": {
+      "description": "File upload response payload",
+      "type": "object",
+      "properties": {
+        "avatar_url": {
+          "type": "string",
+          "example": "/api/user/12345/avatar"
+        },
+        "message": {
+          "type": "string",
+          "example": "Avatar uploaded successfully"
+        },
+        "success": {
+          "type": "boolean",
+          "example": true
+        }
+      }
+    }
+  },
+  "securityDefinitions": {
+    "BearerAuth": {
+      "description": "Type \"Bearer\" followed by a space and JWT token.",
+      "type": "apiKey",
+      "name": "Authorization",
+      "in": "header"
+    }
+  },
+  "tags": [
+    {
+      "description": "User authentication and registration endpoints",
+      "name": "Authentication"
+    },
+    {
+      "description": "User profile management endpoints",
+      "name": "Profile"
+    },
+    {
+      "description": "User search functionality",
+      "name": "Search"
+    },
+    {
+      "description": "File upload and avatar management",
+      "name": "Upload"
+    },
+    {
+      "description": "API health and status endpoints",
+      "name": "Health"
+    },
+    {
+      "description": "General API information endpoints",
+      "name": "General"
+    }
+  ],
+  "externalDocs": {
+    "description": "Sport Connect Documentation",
+    "url": "https://swagger.io/resources/open-api/"
+  }
 }

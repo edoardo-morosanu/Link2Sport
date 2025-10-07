@@ -17,6 +17,21 @@ func NewSearchController() *SearchController {
 	return &SearchController{}
 }
 
+// SearchUsers godoc
+// @Summary      Search for users
+// @Description  Search for other users by username or display name with pagination
+// @Tags         Search
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        query query string true "Search query (minimum 2 characters)" minlength(2) example("john")
+// @Param        limit query int false "Number of results per page (1-50)" minimum(1) maximum(50) default(10) example(10)
+// @Param        offset query int false "Number of results to skip" minimum(0) default(0) example(0)
+// @Success      200 {object} types.SearchUsersResponse "Search results with pagination info"
+// @Failure      400 {object} types.ErrorResponse "Invalid request or query too short"
+// @Failure      401 {object} types.ErrorResponse "User not authenticated"
+// @Failure      500 {object} types.ErrorResponse "Database error"
+// @Router       /search/users [get]
 func (sc *SearchController) SearchUsers(c *gin.Context) {
 	userID, ok := sc.validateSearchAuthentication(c)
 	if !ok {
