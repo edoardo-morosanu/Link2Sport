@@ -51,6 +51,16 @@ export default function RegisterPage() {
     "Surfing",
   ];
 
+  // Helper function to check if dark mode should be enabled
+  const shouldEnableDarkMode = (
+    savedTheme: string | null,
+    prefersDark: boolean,
+  ): boolean => {
+    const hasExplicitDarkTheme = savedTheme === "dark";
+    const shouldUseSystemPreference = !savedTheme && prefersDark;
+    return hasExplicitDarkTheme || shouldUseSystemPreference;
+  };
+
   useEffect(() => {
     // Check for saved dark mode preference
     const savedTheme = localStorage.getItem("theme");
@@ -58,7 +68,7 @@ export default function RegisterPage() {
       "(prefers-color-scheme: dark)",
     ).matches;
 
-    if (savedTheme === "dark" || (!savedTheme && prefersDark)) {
+    if (shouldEnableDarkMode(savedTheme, prefersDark)) {
       document.documentElement.classList.add("dark");
     }
   }, []);
@@ -196,6 +206,66 @@ export default function RegisterPage() {
     }
   };
 
+  // Helper function to create registration data object
+  const createRegistrationData = () => {
+    return {
+      email: email,
+      password: password,
+      confirm_password: confirmPassword,
+      first_name: firstName,
+      last_name: lastName,
+      username: username,
+      location: location,
+      sports: sports,
+      bio: bio,
+    };
+  };
+
+  // Helper function to handle avatar upload after registration
+  const handleAvatarUpload = async (): Promise<void> => {
+    if (!avatar) {
+      alert("Registration successful! Please log in.");
+      return;
+    }
+
+    try {
+      const loginResponse = await AuthService.login({
+        email: email,
+        password: password,
+      });
+
+      if (!loginResponse.success || !loginResponse.token) {
+        alert(
+          "Registration successful! Please log in to complete your profile.",
+        );
+        return;
+      }
+
+      const uploadResult = await AvatarService.uploadAvatar(avatar);
+      const message = uploadResult.success
+        ? "Registration successful! Profile picture uploaded."
+        : "Registration successful! However, profile picture upload failed. You can upload it later from your profile.";
+
+      alert(message);
+    } catch (uploadError) {
+      console.error("Avatar upload error:", uploadError);
+      alert(
+        "Registration successful! However, profile picture upload failed. You can upload it later from your profile.",
+      );
+    }
+  };
+
+  // Helper function to handle successful registration
+  const handleRegistrationSuccess = async (): Promise<void> => {
+    await handleAvatarUpload();
+    router.push("/login");
+  };
+
+  // Helper function to handle registration failure
+  const handleRegistrationFailure = (response: { error?: string }): void => {
+    setError(response.error || "Registration failed. Please try again.");
+  };
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -207,58 +277,13 @@ export default function RegisterPage() {
     setIsLoading(true);
 
     try {
-      const registrationData = {
-        email: email,
-        password: password,
-        confirm_password: confirmPassword,
-        first_name: firstName,
-        last_name: lastName,
-        username: username,
-        location: location,
-        sports: sports,
-        bio: bio,
-      };
-
+      const registrationData = createRegistrationData();
       const response = await AuthService.register(registrationData);
 
       if (response.success) {
-        // Registration successful
-        if (avatar) {
-          // If user selected an avatar, login and upload it
-          try {
-            const loginResponse = await AuthService.login({
-              email: email,
-              password: password,
-            });
-
-            if (loginResponse.success && loginResponse.token) {
-              // Upload avatar after successful login
-              const uploadResult = await AvatarService.uploadAvatar(avatar);
-              if (uploadResult.success) {
-                alert("Registration successful! Profile picture uploaded.");
-              } else {
-                alert(
-                  "Registration successful! However, profile picture upload failed. You can upload it later from your profile.",
-                );
-              }
-            } else {
-              alert(
-                "Registration successful! Please log in to complete your profile.",
-              );
-            }
-          } catch (uploadError) {
-            console.error("Avatar upload error:", uploadError);
-            alert(
-              "Registration successful! However, profile picture upload failed. You can upload it later from your profile.",
-            );
-          }
-        } else {
-          alert("Registration successful! Please log in.");
-        }
-
-        router.push("/login");
+        await handleRegistrationSuccess();
       } else {
-        setError(response.error || "Registration failed. Please try again.");
+        handleRegistrationFailure(response);
       }
     } catch (error) {
       console.error("Registration error:", error);
@@ -279,20 +304,33 @@ export default function RegisterPage() {
     setSports((prev) => prev.filter((s) => s !== sport));
   };
 
+  // Helper function to check if backspace should remove last sport
+  const shouldRemoveLastSportOnBackspace = (key: string): boolean => {
+    const isBackspaceKey = key === "Backspace";
+    const isInputEmpty = sportInput === "";
+    const hasSports = sports.length > 0;
+    return isBackspaceKey && isInputEmpty && hasSports;
+  };
+
+  // Helper function to handle enter key press for sports
+  const handleEnterKeyForSports = (): void => {
+    const filteredSports = getFilteredSports();
+    if (filteredSports.length > 0) {
+      handleSportAdd(filteredSports[0]);
+    }
+  };
+
+  // Helper function to handle backspace key press for sports
+  const handleBackspaceForSports = (): void => {
+    handleSportRemove(sports[sports.length - 1]);
+  };
+
   const handleSportInputKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
       e.preventDefault();
-      const filteredSports = getFilteredSports();
-      if (filteredSports.length > 0) {
-        handleSportAdd(filteredSports[0]);
-      }
-    } else if (
-      e.key === "Backspace" &&
-      sportInput === "" &&
-      sports.length > 0
-    ) {
-      // Remove last sport when backspacing in empty input
-      handleSportRemove(sports[sports.length - 1]);
+      handleEnterKeyForSports();
+    } else if (shouldRemoveLastSportOnBackspace(e.key)) {
+      handleBackspaceForSports();
     }
   };
 

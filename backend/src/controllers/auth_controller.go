@@ -20,13 +20,36 @@ func NewAuthController() *AuthController {
 
 // Register - POST /api/auth/register
 func (ac *AuthController) Register(c *gin.Context) {
+	req, ok := ac.validateRegisterRequest(c)
+	if !ok {
+		return
+	}
+
+	if !ac.checkUsernameAvailability(c, req.Username) {
+		return
+	}
+
+	newUser, ok := ac.createUserRecord(c, req)
+	if !ok {
+		return
+	}
+
+	if !ac.processSportsAssociation(c, &newUser, req.Sports) {
+		return
+	}
+
+	ac.sendRegistrationSuccessResponse(c, newUser.ID)
+}
+
+// validateRegisterRequest validates the registration request and returns the request data
+func (ac *AuthController) validateRegisterRequest(c *gin.Context) (types.RegisterRequest, bool) {
 	var req types.RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, types.ErrorResponse{
 			Error:   "Invalid request format",
 			Message: err.Error(),
 		})
-		return
+		return req, false
 	}
 
 	if req.Password != req.ConfirmPassword {
@@ -34,17 +57,28 @@ func (ac *AuthController) Register(c *gin.Context) {
 			Error:   "Password mismatch",
 			Message: "Password and confirm password do not match",
 		})
-		return
+		return req, false
 	}
 
+	return req, true
+}
+
+// checkUsernameAvailability checks if the username is already taken
+func (ac *AuthController) checkUsernameAvailability(c *gin.Context, username string) bool {
 	var existingUser models.User
-	if err := config.DB.Where("username = ?", req.Username).First(&existingUser).Error; err == nil {
+	if err := config.DB.Where("username = ?", username).First(&existingUser).Error; err == nil {
 		c.JSON(http.StatusConflict, types.ErrorResponse{
 			Error:   "Username already taken",
 			Message: "This username is already in use. Please choose a different one",
 		})
-		return
+		return false
 	}
+	return true
+}
+
+// createUserRecord creates a new user record with hashed password
+func (ac *AuthController) createUserRecord(c *gin.Context, req types.RegisterRequest) (models.User, bool) {
+	var newUser models.User
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
@@ -52,10 +86,10 @@ func (ac *AuthController) Register(c *gin.Context) {
 			Error:   "Password hashing failed",
 			Message: "Failed to process password",
 		})
-		return
+		return newUser, false
 	}
 
-	newUser := models.User{
+	newUser = models.User{
 		Email:        req.Email,
 		Username:     req.Username,
 		PasswordHash: string(hashedPassword),
@@ -69,38 +103,49 @@ func (ac *AuthController) Register(c *gin.Context) {
 			Error:   "Database Error",
 			Message: "Failed to create user",
 		})
-		return
+		return newUser, false
 	}
 
-	// Handle sports associations
-	if len(req.Sports) > 0 {
-		var sports []models.Sport
-		for _, sportName := range req.Sports {
-			var sport models.Sport
-			// Find or create sport
-			if err := config.DB.Where("name = ?", sportName).FirstOrCreate(&sport, models.Sport{Name: sportName}).Error; err != nil {
-				c.JSON(http.StatusInternalServerError, types.ErrorResponse{
-					Error:   "Database Error",
-					Message: "Failed to process sports",
-				})
-				return
-			}
-			sports = append(sports, sport)
-		}
+	return newUser, true
+}
 
-		// Associate sports with user
-		if err := config.DB.Model(&newUser).Association("Sports").Append(sports); err != nil {
+// processSportsAssociation handles sports processing and association with user
+func (ac *AuthController) processSportsAssociation(c *gin.Context, user *models.User, sportNames []string) bool {
+	if len(sportNames) == 0 {
+		return true
+	}
+
+	var sports []models.Sport
+	for _, sportName := range sportNames {
+		var sport models.Sport
+		// Find or create sport
+		if err := config.DB.Where("name = ?", sportName).FirstOrCreate(&sport, models.Sport{Name: sportName}).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, types.ErrorResponse{
 				Error:   "Database Error",
-				Message: "Failed to associate sports with user",
+				Message: "Failed to process sports",
 			})
-			return
+			return false
 		}
+		sports = append(sports, sport)
 	}
 
+	// Associate sports with user
+	if err := config.DB.Model(user).Association("Sports").Append(sports); err != nil {
+		c.JSON(http.StatusInternalServerError, types.ErrorResponse{
+			Error:   "Database Error",
+			Message: "Failed to associate sports with user",
+		})
+		return false
+	}
+
+	return true
+}
+
+// sendRegistrationSuccessResponse sends the success response for registration
+func (ac *AuthController) sendRegistrationSuccessResponse(c *gin.Context, userID uint) {
 	c.JSON(http.StatusCreated, types.AuthResponse{
 		Message: "Account created successfully! Welcome aboard!",
-		UserID:  newUser.ID,
+		UserID:  userID,
 	})
 }
 
