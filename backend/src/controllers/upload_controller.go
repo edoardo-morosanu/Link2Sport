@@ -191,16 +191,10 @@ func (uc *UploadController) GetAvatar(c *gin.Context) {
 		return
 	}
 
-	// No custom avatar - serve default with user's name
-	displayName := user.DisplayName
-	if displayName == "" {
-		displayName = user.Username
-	}
-	if displayName == "" {
-		displayName = "User"
-	}
-
-	uc.serveDefaultAvatar(c, displayName)
+	// No custom avatar - return 404 (frontend will handle placeholder)
+	c.JSON(http.StatusNotFound, gin.H{
+		"error": "No avatar found",
+	})
 }
 
 // serveDefaultAvatar serves a customized default avatar based on the user's name

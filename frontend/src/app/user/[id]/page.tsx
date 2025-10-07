@@ -1,34 +1,34 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { useProfile } from "@/hooks/useProfile";
-import { ProfilePost, ProfileActivity, UserProfile } from "@/types/profile";
+import { SearchService } from "@/services/search";
+import { PublicUserProfile } from "@/types/search";
 import { AppHeader } from "@/components/profile/AppHeader";
-import { ProfileHeader } from "@/components/profile/ProfileHeader";
+import PublicProfileHeader from "@/components/profile/PublicProfileHeader";
 import { ProfileTabs } from "@/components/profile/ProfileTabs";
 import { PostsTab } from "@/components/profile/PostsTab";
 import { ActivitiesTab } from "@/components/profile/ActivitiesTab";
 import { MediaTab } from "@/components/profile/MediaTab";
-import { EditProfileModal } from "@/components/profile/EditProfileModal";
+import { ProfilePost, ProfileActivity } from "@/types/profile";
 
-export default function ProfilePage() {
+export default function UserProfilePage() {
   const { user, isLoading: authLoading } = useAuth();
-  const {
-    profile,
-    loading: profileLoading,
-    error,
-    updateProfile,
-  } = useProfile();
   const router = useRouter();
+  const params = useParams();
+  const userId = params.id as string;
 
+  const [profile, setProfile] = useState<PublicUserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"posts" | "activities" | "media">(
     "posts",
   );
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [posts, setPosts] = useState<ProfilePost[]>([]);
   const [activities, setActivities] = useState<ProfileActivity[]>([]);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -37,44 +37,87 @@ export default function ProfilePage() {
     }
   }, [user, authLoading, router]);
 
+  // Redirect to own profile if viewing self
   useEffect(() => {
-    // TODO: Replace with actual API calls when posts/activities endpoints are ready
-    // For now, keeping the mock data structure but making it conditional on having a profile
+    if (user && userId === user.id) {
+      router.push("/profile");
+    }
+  }, [user, userId, router]);
+
+  // Fetch user profile
+  useEffect(() => {
+    async function fetchProfile() {
+      if (!userId || !user) return;
+
+      try {
+        setLoading(true);
+        setError(null);
+        const userProfile = await SearchService.getUserProfile(
+          parseInt(userId),
+        );
+        setProfile(userProfile);
+        setIsFollowing(userProfile.is_following || false);
+      } catch (err) {
+        console.error("Failed to fetch user profile:", err);
+        setError("Failed to load user profile");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchProfile();
+  }, [userId, user]);
+
+  // Load mock data for posts and activities (replace with actual API calls later)
+  useEffect(() => {
     if (profile) {
       setPosts([
         {
           id: "1",
-          userId: profile.id,
-          content: `Had an amazing ${profile.sports[0] || "sports"} session today! Thanks to everyone who joined.`,
+          userId: profile.id.toString(),
+          content: `Had an amazing ${profile.sports[0] || "sports"} session today! Great community here.`,
           timestamp: new Date("2024-10-04"),
-          likes: 15,
-          comments: 3,
+          likes: 12,
+          comments: 2,
+        },
+        {
+          id: "2",
+          userId: profile.id.toString(),
+          content: "Looking forward to the next game! Who's in?",
+          timestamp: new Date("2024-10-02"),
+          likes: 8,
+          comments: 5,
         },
       ]);
 
       setActivities([
         {
           id: "1",
-          userId: profile.id,
+          userId: profile.id.toString(),
           type: "game",
           sport: profile.sports[0] || "Basketball",
           title: `${profile.sports[0] || "Basketball"} Game`,
           description: `Friendly ${profile.sports[0] || "basketball"} match`,
-          date: new Date("2024-10-04"),
-          location: profile.location || "Local Court",
-          participants: 8,
+          date: new Date("2024-10-06"),
+          location: profile.city || "Local Court",
+          participants: 6,
         },
       ]);
     }
   }, [profile]);
 
-  const handleEditProfile = async (updatedProfile: Partial<UserProfile>) => {
+  const handleFollow = async () => {
+    if (!profile) return;
+
     try {
-      await updateProfile(updatedProfile);
-      setIsEditModalOpen(false);
-    } catch (error) {
-      console.error("Failed to update profile:", error);
-      // Error handling could be improved with toast notifications
+      setFollowLoading(true);
+      // TODO: Implement actual follow/unfollow API call
+      // await FollowService.toggleFollow(profile.id);
+      setIsFollowing(!isFollowing);
+    } catch (err) {
+      console.error("Failed to toggle follow:", err);
+    } finally {
+      setFollowLoading(false);
     }
   };
 
@@ -83,7 +126,7 @@ export default function ProfilePage() {
 
     switch (activeTab) {
       case "posts":
-        return <PostsTab posts={posts} profileName={profile.name} />;
+        return <PostsTab posts={posts} profileName={profile.display_name} />;
       case "activities":
         return <ActivitiesTab activities={activities} />;
       case "media":
@@ -94,7 +137,7 @@ export default function ProfilePage() {
   };
 
   // Show loading state
-  if (authLoading || profileLoading) {
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex justify-center items-center">
         <div className="text-center">
@@ -131,12 +174,20 @@ export default function ProfilePage() {
             Error Loading Profile
           </h2>
           <p className="text-gray-600 dark:text-gray-400 mb-4">{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Try Again
-          </button>
+          <div className="space-x-4">
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Try Again
+            </button>
+            <button
+              onClick={() => router.back()}
+              className="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors"
+            >
+              Go Back
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -153,17 +204,11 @@ export default function ProfilePage() {
 
       <div className="max-w-4xl mx-auto px-4 py-8">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm transition-colors duration-300">
-          <ProfileHeader
-            name={profile.name}
-            username={profile.username}
-            bio={profile.bio}
-            followersCount={profile.followersCount}
-            followingCount={profile.followingCount}
-            activitiesCount={profile.activitiesCount}
-            avatarUrl={profile.avatarUrl}
-            hasAvatar={profile.hasAvatar}
-            userId={profile.id}
-            onEditProfile={() => setIsEditModalOpen(true)}
+          <PublicProfileHeader
+            profile={profile}
+            isFollowing={isFollowing}
+            followLoading={followLoading}
+            onFollow={handleFollow}
           />
 
           <ProfileTabs activeTab={activeTab} onTabChange={setActiveTab} />
@@ -171,13 +216,6 @@ export default function ProfilePage() {
           <div className="p-6">{renderTabContent()}</div>
         </div>
       </div>
-
-      <EditProfileModal
-        isOpen={isEditModalOpen}
-        profile={profile}
-        onClose={() => setIsEditModalOpen(false)}
-        onSave={handleEditProfile}
-      />
     </div>
   );
 }

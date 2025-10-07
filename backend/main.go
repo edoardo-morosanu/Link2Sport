@@ -54,11 +54,13 @@ func main() {
 	authController := controllers.NewAuthController()
 	profileController := controllers.NewProfileController()
 	uploadController := controllers.NewUploadController()
+	searchController := controllers.NewSearchController()
 
 	// Setup routes
 	routes.SetupAuthRoutes(r, authController)
 	routes.SetupProfileRoutes(r, profileController)
 	routes.SetupUploadRoutes(r, uploadController)
+	routes.SetupSearchRoutes(r, searchController)
 
 	// API v1 routes (existing routes)
 	v1 := r.Group("/api/v1")
