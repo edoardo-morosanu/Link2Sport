@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function LoginPage() {
@@ -19,7 +20,7 @@ export default function LoginPage() {
       "(prefers-color-scheme: dark)",
     ).matches;
 
-    if (savedTheme === "dark" || (!savedTheme && prefersDark)) {
+    if ((savedTheme || (prefersDark ? "dark" : "light")) === "dark") {
       document.documentElement.classList.add("dark");
     }
   }, []);
@@ -63,6 +64,7 @@ export default function LoginPage() {
       }
     } catch (error) {
       setError("An unexpected error occurred");
+      console.error("Login error:", error);
     }
   };
 
@@ -72,10 +74,12 @@ export default function LoginPage() {
         {/* Logo and Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
-            <img
+            <Image
               src="/assets/logo.png"
               alt="Link2Sport Logo"
-              className="w-12 h-12 mr-3 shadow-lg transform hover:scale-105 transition-transform duration-200"
+              width={48}
+              height={48}
+              className="mr-3 shadow-lg transform hover:scale-105 transition-transform duration-200"
             />
             <div>
               <h1 className="text-3xl font-bold text-gray-900 dark:text-white transition-colors duration-200">

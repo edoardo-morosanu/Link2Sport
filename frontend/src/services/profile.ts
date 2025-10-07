@@ -34,7 +34,7 @@ export class ProfileService {
     }
   }
 
-  static async updateProfile(profileData: any) {
+  static async updateProfile(profileData: unknown) {
     const token = AuthService.getToken();
     if (!token) {
       throw new Error("No authentication token found");

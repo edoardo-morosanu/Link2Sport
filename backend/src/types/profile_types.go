@@ -26,3 +26,19 @@ type ProfileUpdateRequest struct {
 	Country     string   `json:"country"`
 	Sports      []string `json:"sports"`
 }
+
+// PublicProfileResponse represents the response for public profile operations (other users' profiles)
+type PublicProfileResponse struct {
+	ID          uint      `json:"id"`
+	Username    string    `json:"username"`
+	DisplayName string    `json:"display_name"`
+	Bio         string    `json:"bio"`
+	City        string    `json:"city"`
+	Country     string    `json:"country"`
+	Sports      []string  `json:"sports"`
+	AvatarURL   string    `json:"avatar_url"`
+	HasAvatar   bool      `json:"has_avatar"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	IsFollowing bool      `json:"is_following"`
+}

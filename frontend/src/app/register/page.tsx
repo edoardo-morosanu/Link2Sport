@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { AuthService } from "@/services/auth";
 import { AvatarService } from "@/services/avatar";
 import { AvatarUpload } from "@/components/ui/AvatarUpload";
@@ -313,10 +314,12 @@ export default function RegisterPage() {
         {/* Logo and Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
-            <img
+            <Image
               src="/assets/logo.png"
               alt="Link2Sport Logo"
-              className="w-12 h-12 mr-3 shadow-lg transform hover:scale-105 transition-transform duration-200"
+              width={48}
+              height={48}
+              className="mr-3 shadow-lg transform hover:scale-105 transition-transform duration-200"
             />
             <div>
               <h1 className="text-3xl font-bold text-gray-900 dark:text-white transition-colors duration-200">
@@ -775,15 +778,6 @@ export default function RegisterPage() {
                       ? "Creating Account..."
                       : "Complete Registration"}
                   </span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleRegister}
-                  disabled={isLoading}
-                  className="w-full bg-blue-100 dark:bg-blue-900/30 hover:bg-blue-200 dark:hover:bg-blue-800/40 text-blue-700 dark:text-blue-300 font-semibold py-4 px-4 rounded-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-                >
-                  Skip for now - Create Account
                 </button>
 
                 <button
