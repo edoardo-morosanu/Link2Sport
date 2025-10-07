@@ -17,6 +17,17 @@ func NewProfileController() *ProfileController {
 	return &ProfileController{}
 }
 
+// GetProfile godoc
+// @Summary      Get current user's profile
+// @Description  Retrieve the authenticated user's complete profile information including sports and avatar
+// @Tags         Profile
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {object} types.ProfileResponse "User profile information"
+// @Failure      401 {object} types.ErrorResponse "User not authenticated"
+// @Failure      404 {object} types.ErrorResponse "Profile not found"
+// @Router       /profile [get]
 func (pc *ProfileController) GetProfile(c *gin.Context) {
 	userID, exists := c.Get("userID")
 	if !exists {
@@ -63,6 +74,19 @@ func (pc *ProfileController) GetProfile(c *gin.Context) {
 	c.JSON(http.StatusOK, profile)
 }
 
+// GetPublicProfile godoc
+// @Summary      Get public user profile
+// @Description  Retrieve another user's public profile information by user ID
+// @Tags         Profile
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id path int true "User ID" example(12345)
+// @Success      200 {object} types.PublicProfileResponse "Public profile information"
+// @Failure      400 {object} types.ErrorResponse "Invalid user ID or trying to access own profile"
+// @Failure      401 {object} types.ErrorResponse "User not authenticated"
+// @Failure      404 {object} types.ErrorResponse "Profile not found"
+// @Router       /profile/{id} [get]
 func (pc *ProfileController) GetPublicProfile(c *gin.Context) {
 	// Get the user ID from the URL parameter
 	userIDParam := c.Param("id")

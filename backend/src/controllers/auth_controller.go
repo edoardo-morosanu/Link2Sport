@@ -18,7 +18,18 @@ func NewAuthController() *AuthController {
 	return &AuthController{}
 }
 
-// Register - POST /api/auth/register
+// Register godoc
+// @Summary      Register a new user
+// @Description  Create a new user account with profile information and associated sports
+// @Tags         Authentication
+// @Accept       json
+// @Produce      json
+// @Param        request body types.RegisterRequest true "User registration data"
+// @Success      201 {object} types.AuthResponse "User successfully registered"
+// @Failure      400 {object} types.ErrorResponse "Invalid request format or password mismatch"
+// @Failure      409 {object} types.ErrorResponse "Username already taken"
+// @Failure      500 {object} types.ErrorResponse "Internal server error"
+// @Router       /auth/register [post]
 func (ac *AuthController) Register(c *gin.Context) {
 	req, ok := ac.validateRegisterRequest(c)
 	if !ok {
@@ -149,7 +160,18 @@ func (ac *AuthController) sendRegistrationSuccessResponse(c *gin.Context, userID
 	})
 }
 
-// Login - POST /api/auth/login
+// Login godoc
+// @Summary      User login
+// @Description  Authenticate user with email and password, returns JWT token
+// @Tags         Authentication
+// @Accept       json
+// @Produce      json
+// @Param        credentials body types.LoginRequest true "User login credentials"
+// @Success      200 {object} types.AuthResponse "Login successful with JWT token"
+// @Failure      400 {object} types.ErrorResponse "Invalid request format"
+// @Failure      401 {object} types.ErrorResponse "Invalid credentials"
+// @Failure      500 {object} types.ErrorResponse "Database error or token generation failed"
+// @Router       /auth/login [post]
 func (ac *AuthController) Login(c *gin.Context) {
 	var req types.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -201,6 +223,47 @@ func (ac *AuthController) Login(c *gin.Context) {
 	})
 }
 
+// FieldAvailabilityConfig holds configuration for field availability checks
+type FieldAvailabilityConfig struct {
+	DBColumn        string
+	ConflictError   string
+	ConflictMessage string
+	SuccessMessage  string
+	ResponseKey     string
+}
+
+// checkFieldAvailability is a generic function to check if a field value is available
+func (ac *AuthController) checkFieldAvailability(c *gin.Context, value string, availabilityConfig FieldAvailabilityConfig) {
+	var existingUser models.User
+	query := availabilityConfig.DBColumn + " = ?"
+
+	if err := config.DB.Where(query, value).First(&existingUser).Error; err == nil {
+		c.JSON(http.StatusConflict, types.ErrorResponse{
+			Error:   availabilityConfig.ConflictError,
+			Message: availabilityConfig.ConflictMessage,
+		})
+		return
+	}
+
+	// Field is available
+	response := gin.H{
+		"message":                      availabilityConfig.SuccessMessage,
+		availabilityConfig.ResponseKey: value,
+	}
+	c.JSON(http.StatusOK, response)
+}
+
+// CheckEmail godoc
+// @Summary      Check email availability
+// @Description  Verify if an email address is available for registration
+// @Tags         Authentication
+// @Accept       json
+// @Produce      json
+// @Param        email body object{email=string} true "Email to check" example({"email": "user@example.com"})
+// @Success      200 {object} object{message=string,email=string} "Email is available" example({"message": "Email is available", "email": "user@example.com"})
+// @Failure      400 {object} types.ErrorResponse "Invalid request format or email format"
+// @Failure      409 {object} types.ErrorResponse "Email already exists"
+// @Router       /auth/check-email [post]
 func (ac *AuthController) CheckEmail(c *gin.Context) {
 	var req struct {
 		Email string `json:"email" binding:"required,email"`
@@ -214,22 +277,28 @@ func (ac *AuthController) CheckEmail(c *gin.Context) {
 		return
 	}
 
-	var existingUser models.User
-	if err := config.DB.Where("email = ?", req.Email).First(&existingUser).Error; err == nil {
-		c.JSON(http.StatusConflict, types.ErrorResponse{
-			Error:   "Email already exists",
-			Message: "An account with this email already exists",
-		})
-		return
+	availabilityConfig := FieldAvailabilityConfig{
+		DBColumn:        "email",
+		ConflictError:   "Email already exists",
+		ConflictMessage: "An account with this email already exists",
+		SuccessMessage:  "Email is available",
+		ResponseKey:     "email",
 	}
 
-	// Email is available
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Email is available",
-		"email":   req.Email,
-	})
+	ac.checkFieldAvailability(c, req.Email, availabilityConfig)
 }
 
+// CheckUsername godoc
+// @Summary      Check username availability
+// @Description  Verify if a username is available for registration
+// @Tags         Authentication
+// @Accept       json
+// @Produce      json
+// @Param        username body object{username=string} true "Username to check" example({"username": "johndoe"})
+// @Success      200 {object} object{message=string,username=string} "Username is available" example({"message": "Username is available", "username": "johndoe"})
+// @Failure      400 {object} types.ErrorResponse "Invalid request format"
+// @Failure      409 {object} types.ErrorResponse "Username already exists"
+// @Router       /auth/check-username [post]
 func (ac *AuthController) CheckUsername(c *gin.Context) {
 	var req struct {
 		Username string `json:"username" binding:"required"`
@@ -243,18 +312,13 @@ func (ac *AuthController) CheckUsername(c *gin.Context) {
 		return
 	}
 
-	var existingUser models.User
-	if err := config.DB.Where("username = ?", req.Username).First(&existingUser).Error; err == nil {
-		c.JSON(http.StatusConflict, types.ErrorResponse{
-			Error:   "Username already exists",
-			Message: "This username is already taken. Please choose a different one.",
-		})
-		return
+	availabilityConfig := FieldAvailabilityConfig{
+		DBColumn:        "username",
+		ConflictError:   "Username already exists",
+		ConflictMessage: "This username is already taken. Please choose a different one.",
+		SuccessMessage:  "Username is available",
+		ResponseKey:     "username",
 	}
 
-	// Username is available
-	c.JSON(http.StatusOK, gin.H{
-		"message":  "Username is available",
-		"username": req.Username,
-	})
+	ac.checkFieldAvailability(c, req.Username, availabilityConfig)
 }

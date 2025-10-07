@@ -13,7 +13,7 @@ func SetupProfileRoutes(router *gin.Engine, profileController *controllers.Profi
 
 	{
 		profileGroup.GET("/profile", profileController.GetProfile)
-		profileGroup.GET("/users/:id", profileController.GetPublicProfile)
+		profileGroup.GET("/profile/:id", profileController.GetPublicProfile)
 
 		// profileGroup.PUT("/profile", profileController.UpdateProfile)
 	}

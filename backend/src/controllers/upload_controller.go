@@ -21,7 +21,20 @@ func NewUploadController() *UploadController {
 	return &UploadController{}
 }
 
-// UploadAvatar - POST /api/upload/avatar
+// UploadAvatar godoc
+// @Summary      Upload user avatar
+// @Description  Upload a new avatar image for the authenticated user. Accepts JPEG, PNG, GIF, and WebP formats. Maximum file size is 5MB.
+// @Tags         Upload
+// @Accept       multipart/form-data
+// @Produce      json
+// @Security     BearerAuth
+// @Param        avatar formData file true "Avatar image file (JPEG, PNG, GIF, WebP, max 5MB)"
+// @Success      200 {object} types.UploadResponse "Avatar uploaded successfully"
+// @Failure      400 {object} types.FileUploadError "No file uploaded or invalid file format"
+// @Failure      401 {object} types.FileUploadError "User not authenticated"
+// @Failure      404 {object} types.FileUploadError "User not found"
+// @Failure      500 {object} types.FileUploadError "File processing or database error"
+// @Router       /upload/avatar [post]
 func (uc *UploadController) UploadAvatar(c *gin.Context) {
 	userID, ok := uc.validateUploadAuthentication(c)
 	if !ok {
@@ -156,7 +169,19 @@ func (uc *UploadController) sendUploadSuccessResponse(c *gin.Context, userID uin
 	})
 }
 
-// DeleteAvatar - DELETE /api/upload/avatar
+// DeleteAvatar godoc
+// @Summary      Delete user avatar
+// @Description  Remove the current user's custom avatar image, reverting to default avatar
+// @Tags         Upload
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {object} types.UploadResponse "Avatar deleted successfully"
+// @Failure      400 {object} types.FileUploadError "No avatar to delete"
+// @Failure      401 {object} types.FileUploadError "User not authenticated"
+// @Failure      404 {object} types.FileUploadError "User not found"
+// @Failure      500 {object} types.FileUploadError "Database error"
+// @Router       /upload/avatar [delete]
 func (uc *UploadController) DeleteAvatar(c *gin.Context) {
 	userID, exists := c.Get("userID")
 	if !exists {
@@ -204,7 +229,18 @@ func (uc *UploadController) DeleteAvatar(c *gin.Context) {
 	})
 }
 
-// GetAvatar - GET /api/user/:userId/avatar
+// GetAvatar godoc
+// @Summary      Get user avatar
+// @Description  Retrieve a user's avatar image by user ID. Returns custom uploaded avatar or redirects to default avatar
+// @Tags         Upload
+// @Accept       json
+// @Produce      image/jpeg,image/png,image/gif,image/webp
+// @Param        userId path int true "User ID" example(12345)
+// @Success      200 {string} binary "User's avatar image"
+// @Success      302 {string} string "Redirect to default avatar"
+// @Failure      400 {object} object{error=string} "User ID is required"
+// @Failure      404 {object} object{error=string} "No avatar found"
+// @Router       /user/{userId}/avatar [get]
 func (uc *UploadController) GetAvatar(c *gin.Context) {
 	userID := c.Param("userId")
 	if userID == "" {
