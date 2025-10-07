@@ -7,6 +7,7 @@ import (
 	"backend/src/utils"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"strings"
@@ -22,17 +23,48 @@ func NewUploadController() *UploadController {
 
 // UploadAvatar - POST /api/upload/avatar
 func (uc *UploadController) UploadAvatar(c *gin.Context) {
-	// Get user ID from JWT middleware
+	userID, ok := uc.validateUploadAuthentication(c)
+	if !ok {
+		return
+	}
+
+	fileHeader, ok := uc.validateUploadedFile(c)
+	if !ok {
+		return
+	}
+
+	user, ok := uc.getCurrentUser(c, userID)
+	if !ok {
+		return
+	}
+
+	fileContent, contentType, ok := uc.processFileContent(c, fileHeader)
+	if !ok {
+		return
+	}
+
+	if !uc.updateUserAvatar(c, &user, fileContent, contentType) {
+		return
+	}
+
+	uc.sendUploadSuccessResponse(c, user.ID)
+}
+
+// validateUploadAuthentication validates user authentication for upload
+func (uc *UploadController) validateUploadAuthentication(c *gin.Context) (interface{}, bool) {
 	userID, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, types.FileUploadError{
 			Error:   "Unauthorized",
 			Message: "User not authenticated",
 		})
-		return
+		return nil, false
 	}
+	return userID, true
+}
 
-	// Get the uploaded file
+// validateUploadedFile validates the uploaded file
+func (uc *UploadController) validateUploadedFile(c *gin.Context) (*multipart.FileHeader, bool) {
 	fileHeader, err := c.FormFile("avatar")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, types.FileUploadError{
@@ -40,73 +72,83 @@ func (uc *UploadController) UploadAvatar(c *gin.Context) {
 			Message:   "Please select an image file to upload",
 			ErrorCode: "NO_FILE",
 		})
-		return
+		return nil, false
 	}
 
-	// Validate the file
 	if err := utils.ValidateImageFile(fileHeader); err != nil {
 		c.JSON(http.StatusBadRequest, types.FileUploadError{
 			Error:     "Invalid file",
 			Message:   err.Error(),
 			ErrorCode: "INVALID_FILE",
 		})
-		return
+		return nil, false
 	}
 
-	// Get current user
+	return fileHeader, true
+}
+
+// getCurrentUser retrieves the current user from database
+func (uc *UploadController) getCurrentUser(c *gin.Context, userID interface{}) (models.User, bool) {
 	var user models.User
 	if err := config.DB.First(&user, userID).Error; err != nil {
 		c.JSON(http.StatusNotFound, types.FileUploadError{
 			Error:   "User not found",
 			Message: "Unable to find user profile",
 		})
-		return
+		return user, false
 	}
+	return user, true
+}
 
-	// Read the uploaded file content
+// processFileContent processes the uploaded file content
+func (uc *UploadController) processFileContent(c *gin.Context, fileHeader *multipart.FileHeader) ([]byte, string, bool) {
 	file, err := fileHeader.Open()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, types.FileUploadError{
 			Error:   "File processing failed",
 			Message: "Unable to read uploaded file",
 		})
-		return
+		return nil, "", false
 	}
 	defer file.Close()
 
-	// Read file content into byte slice
 	fileContent, err := io.ReadAll(file)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, types.FileUploadError{
 			Error:   "File processing failed",
 			Message: "Unable to process uploaded file",
 		})
-		return
+		return nil, "", false
 	}
 
-	// Get content type
 	contentType := fileHeader.Header.Get("Content-Type")
 	if contentType == "" {
 		contentType = utils.GetContentTypeFromExtension(fileHeader.Filename)
 	}
 
-	// Update user avatar in database
+	return fileContent, contentType, true
+}
+
+// updateUserAvatar updates the user's avatar in the database
+func (uc *UploadController) updateUserAvatar(c *gin.Context, user *models.User, fileContent []byte, contentType string) bool {
 	updates := map[string]any{
 		"avatar_data": fileContent,
 		"avatar_type": contentType,
 	}
 
-	if err := config.DB.Model(&user).Updates(updates).Error; err != nil {
+	if err := config.DB.Model(user).Updates(updates).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, types.FileUploadError{
 			Error:   "Database error",
 			Message: "Failed to update user profile",
 		})
-		return
+		return false
 	}
+	return true
+}
 
-	// Return success with avatar URL
-	avatarURL := fmt.Sprintf("/api/user/%d/avatar", user.ID)
-
+// sendUploadSuccessResponse sends the success response for avatar upload
+func (uc *UploadController) sendUploadSuccessResponse(c *gin.Context, userID uint) {
+	avatarURL := fmt.Sprintf("/api/user/%d/avatar", userID)
 	c.JSON(http.StatusOK, types.UploadResponse{
 		Message:   "Avatar uploaded successfully",
 		Success:   true,

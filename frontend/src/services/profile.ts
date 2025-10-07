@@ -3,66 +3,65 @@ import { AuthService } from "./auth";
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 export class ProfileService {
-  static async getProfile() {
+  private static validateAuthentication(): string {
     const token = AuthService.getToken();
     if (!token) {
       throw new Error("No authentication token found");
     }
+    return token;
+  }
+
+  private static createHeaders(token: string): HeadersInit {
+    return {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    };
+  }
+
+  private static async handleResponse(response: Response): Promise<unknown> {
+    if (!response.ok) {
+      if (response.status === 401) {
+        AuthService.logout();
+        throw new Error("Authentication expired. Please login again.");
+      }
+      throw new Error(`Request failed with status ${response.status}`);
+    }
+    return await response.json();
+  }
+
+  private static async makeAuthenticatedRequest(
+    url: string,
+    options: RequestInit,
+  ): Promise<unknown> {
+    const token = this.validateAuthentication();
+
+    const requestOptions: RequestInit = {
+      ...options,
+      headers: {
+        ...this.createHeaders(token),
+        ...options.headers,
+      },
+      credentials: "include",
+    };
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/profile`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          AuthService.logout();
-          throw new Error("Authentication expired. Please login again.");
-        }
-        throw new Error("Failed to fetch profile");
-      }
-
-      return await response.json();
+      const response = await fetch(url, requestOptions);
+      return await this.handleResponse(response);
     } catch (error) {
-      console.error("Profile fetch error:", error);
+      console.error("API request error:", error);
       throw error;
     }
   }
+  static async getProfile() {
+    return await this.makeAuthenticatedRequest(`${API_BASE_URL}/api/profile`, {
+      method: "GET",
+    });
+  }
 
   static async updateProfile(profileData: unknown) {
-    const token = AuthService.getToken();
-    if (!token) {
-      throw new Error("No authentication token found");
-    }
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/profile`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(profileData),
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          AuthService.logout();
-          throw new Error("Authentication expired. Please login again.");
-        }
-        throw new Error("Failed to update profile");
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error("Profile update error:", error);
-      throw error;
-    }
+    return await this.makeAuthenticatedRequest(`${API_BASE_URL}/api/profile`, {
+      method: "PUT",
+      body: JSON.stringify(profileData),
+    });
   }
 }

@@ -10,109 +10,132 @@ export interface AvatarUploadResponse {
 }
 
 export class AvatarService {
-  // Upload avatar image
-  static async uploadAvatar(file: File): Promise<AvatarUploadResponse> {
+  private static validateAuthentication(): string {
     const token = AuthService.getToken();
     if (!token) {
       throw new Error("No authentication token found");
     }
+    return token;
+  }
 
+  private static async parseErrorResponse(
+    response: Response,
+    defaultMessage: string,
+  ): Promise<string> {
+    try {
+      const errorData = await response.json();
+      return errorData.message || errorData.error || defaultMessage;
+    } catch (e) {
+      console.error("Failed to parse error response:", e);
+      return defaultMessage;
+    }
+  }
+
+  private static async handleErrorResponse(
+    response: Response,
+    defaultMessage: string,
+  ): Promise<AvatarUploadResponse> {
+    if (response.status === 401) {
+      AuthService.logout();
+      throw new Error("Authentication expired. Please login again.");
+    }
+
+    const errorMessage = await this.parseErrorResponse(
+      response,
+      defaultMessage,
+    );
+    return {
+      success: false,
+      message: errorMessage,
+    };
+  }
+
+  private static createSuccessResponse(
+    data: { message?: string; avatar_url?: string },
+    defaultMessage: string,
+  ): AvatarUploadResponse {
+    return {
+      success: true,
+      message: data.message || defaultMessage,
+      avatar_url: data.avatar_url,
+    };
+  }
+
+  private static handleCatchError(
+    error: unknown,
+    operation: string,
+  ): AvatarUploadResponse {
+    console.error(`Avatar ${operation} error:`, error);
+    return {
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Network error. Please try again.",
+    };
+  }
+
+  private static async makeAvatarRequest(
+    method: string,
+    body?: FormData,
+    contentType?: string,
+  ): Promise<Response> {
+    const token = this.validateAuthentication();
+
+    const headers: HeadersInit = {
+      Authorization: `Bearer ${token}`,
+    };
+
+    if (contentType) {
+      headers["Content-Type"] = contentType;
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/upload/avatar`, {
+      method,
+      headers,
+      body,
+      credentials: "include",
+    });
+
+    return response;
+  }
+
+  // Upload avatar image
+  static async uploadAvatar(file: File): Promise<AvatarUploadResponse> {
     try {
       const formData = new FormData();
       formData.append("avatar", file);
 
-      const response = await fetch(`${API_BASE_URL}/api/upload/avatar`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData,
-        credentials: "include",
-      });
+      const response = await this.makeAvatarRequest("POST", formData);
 
       if (!response.ok) {
-        if (response.status === 401) {
-          AuthService.logout();
-          throw new Error("Authentication expired. Please login again.");
-        }
-
-        let errorMessage = "Upload failed";
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.message || errorData.error || errorMessage;
-        } catch (e) {
-          console.error("Failed to parse error response:", e);
-        }
-
-        return {
-          success: false,
-          message: errorMessage,
-        };
+        return await this.handleErrorResponse(response, "Upload failed");
       }
 
       const data = await response.json();
-      return {
-        success: true,
-        message: data.message || "Avatar uploaded successfully",
-        avatar_url: data.avatar_url,
-      };
+      return this.createSuccessResponse(data, "Avatar uploaded successfully");
     } catch (error) {
-      console.error("Avatar upload error:", error);
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : "Network error. Please try again.",
-      };
+      return this.handleCatchError(error, "upload");
     }
   }
 
   // Delete current avatar
   static async deleteAvatar(): Promise<AvatarUploadResponse> {
-    const token = AuthService.getToken();
-    if (!token) {
-      throw new Error("No authentication token found");
-    }
-
     try {
-      const response = await fetch(`${API_BASE_URL}/api/upload/avatar`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        credentials: "include",
-      });
+      const response = await this.makeAvatarRequest(
+        "DELETE",
+        undefined,
+        "application/json",
+      );
 
       if (!response.ok) {
-        if (response.status === 401) {
-          AuthService.logout();
-          throw new Error("Authentication expired. Please login again.");
-        }
-
-        let errorMessage = "Delete failed";
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.message || errorData.error || errorMessage;
-        } catch (e) {
-          console.error("Failed to parse error response:", e);
-        }
-
-        return {
-          success: false,
-          message: errorMessage,
-        };
+        return await this.handleErrorResponse(response, "Delete failed");
       }
 
       const data = await response.json();
-      return {
-        success: true,
-        message: data.message || "Avatar deleted successfully",
-      };
+      return this.createSuccessResponse(data, "Avatar deleted successfully");
     } catch (error) {
-      console.error("Avatar delete error:", error);
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : "Network error. Please try again.",
-      };
+      return this.handleCatchError(error, "delete");
     }
   }
 

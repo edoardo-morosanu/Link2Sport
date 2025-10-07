@@ -3,10 +3,9 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { SearchService } from "@/services/search";
+import { AvatarService } from "@/services/avatar";
 import { SearchUser } from "@/types/search";
 import { useDebounce } from "@/hooks/useDebounce";
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 interface SearchBarProps {
   onClose?: () => void;
@@ -81,29 +80,47 @@ export function SearchBar({ onClose }: SearchBarProps) {
     }
   };
 
+  const shouldHandleKeyDown = () => {
+    return isOpen && results.length > 0;
+  };
+
+  const handleArrowDown = (e: React.KeyboardEvent) => {
+    e.preventDefault();
+    setFocusedIndex((prev) => (prev < results.length - 1 ? prev + 1 : prev));
+  };
+
+  const handleArrowUp = (e: React.KeyboardEvent) => {
+    e.preventDefault();
+    setFocusedIndex((prev) => (prev > 0 ? prev - 1 : -1));
+  };
+
+  const handleEnterKey = (e: React.KeyboardEvent) => {
+    e.preventDefault();
+    if (focusedIndex >= 0 && focusedIndex < results.length) {
+      handleUserClick(results[focusedIndex]);
+    }
+  };
+
+  const handleEscapeKey = () => {
+    setIsOpen(false);
+    setFocusedIndex(-1);
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (!isOpen || results.length === 0) return;
+    if (!shouldHandleKeyDown()) return;
 
     switch (e.key) {
       case "ArrowDown":
-        e.preventDefault();
-        setFocusedIndex((prev) =>
-          prev < results.length - 1 ? prev + 1 : prev,
-        );
+        handleArrowDown(e);
         break;
       case "ArrowUp":
-        e.preventDefault();
-        setFocusedIndex((prev) => (prev > 0 ? prev - 1 : -1));
+        handleArrowUp(e);
         break;
       case "Enter":
-        e.preventDefault();
-        if (focusedIndex >= 0 && focusedIndex < results.length) {
-          handleUserClick(results[focusedIndex]);
-        }
+        handleEnterKey(e);
         break;
       case "Escape":
-        setIsOpen(false);
-        setFocusedIndex(-1);
+        handleEscapeKey();
         break;
     }
   };
@@ -197,7 +214,28 @@ export function SearchBar({ onClose }: SearchBarProps) {
                     {/* Avatar */}
                     <div className="relative">
                       <div className="w-12 h-12 rounded-full overflow-hidden ring-2 ring-gray-200 dark:ring-gray-700 group-hover:ring-blue-300 dark:group-hover:ring-blue-600 transition-all duration-200">
-                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-400 to-purple-500">
+                        {user.has_avatar ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={AvatarService.getAvatarUrl(user.id)}
+                            alt={`${user.display_name}'s avatar`}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              // Fallback to default avatar on error
+                              const target = e.currentTarget;
+                              target.style.display = "none";
+                              if (target.nextSibling) {
+                                (
+                                  target.nextSibling as HTMLElement
+                                ).style.display = "flex";
+                              }
+                            }}
+                          />
+                        ) : null}
+                        <div
+                          className={`w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-400 to-purple-500 ${user.has_avatar ? "hidden" : ""}`}
+                          style={{ display: user.has_avatar ? "none" : "flex" }}
+                        >
                           <svg
                             className="w-6 h-6 text-white"
                             fill="currentColor"

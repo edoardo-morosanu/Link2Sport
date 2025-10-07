@@ -9,27 +9,74 @@ import {
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 export class AuthService {
+  private static async parseErrorResponse(
+    response: Response,
+    defaultMessage: string,
+  ): Promise<string> {
+    try {
+      const errorData = await response.json();
+      return errorData.message || errorData.error || defaultMessage;
+    } catch (e) {
+      console.error("Failed to parse error response:", e);
+      return `HTTP ${response.status}: ${response.statusText}`;
+    }
+  }
+
+  private static handleCatchError(error: unknown, operation: string): string {
+    console.error(`${operation} error:`, error);
+    return error instanceof Error
+      ? error.message
+      : "Network error. Please try again.";
+  }
+
+  private static async makeAuthRequest(
+    endpoint: string,
+    data: object,
+  ): Promise<Response> {
+    return await fetch(`${API_BASE_URL}/api/auth/${endpoint}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+      credentials: "include",
+    });
+  }
+
+  private static storeAuthData(
+    data: { token?: string; user_id?: number | string },
+    email: string,
+  ): void {
+    if (data.token && data.user_id) {
+      localStorage.setItem("authToken", data.token);
+      localStorage.setItem("userId", data.user_id.toString());
+      localStorage.setItem("userEmail", email);
+    }
+  }
+
+  private static createLoginSuccessResponse(
+    data: { token?: string; user_id?: number | string },
+    email: string,
+  ): LoginResponse {
+    return {
+      success: true,
+      token: data.token,
+      user: {
+        id: data.user_id?.toString() || "",
+        email: email,
+        name: "User", // Will be updated when we fetch profile
+      },
+    };
+  }
   static async login(credentials: LoginRequest): Promise<LoginResponse> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(credentials),
-        credentials: "include",
-      });
+      const response = await this.makeAuthRequest("login", credentials);
 
       if (!response.ok) {
-        let errorMessage = "Login failed";
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.message || errorData.error || errorMessage;
-        } catch (e) {
-          console.error("Failed to parse error response:", e);
-          errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-        }
-
+        const errorMessage = await this.parseErrorResponse(
+          response,
+          "Login failed",
+        );
         return {
           success: false,
           error: errorMessage,
@@ -37,58 +84,28 @@ export class AuthService {
       }
 
       const data = await response.json();
-
-      // Store JWT token and user info
-      if (data.token && data.user_id) {
-        localStorage.setItem("authToken", data.token);
-        localStorage.setItem("userId", data.user_id.toString());
-        localStorage.setItem("userEmail", credentials.email);
-      }
-
-      return {
-        success: true,
-        token: data.token,
-        user: {
-          id: data.user_id?.toString() || "",
-          email: credentials.email,
-          name: "User", // Will be updated when we fetch profile
-        },
-      };
+      this.storeAuthData(data, credentials.email);
+      return this.createLoginSuccessResponse(data, credentials.email);
     } catch (error) {
-      console.error("Login error:", error);
-
       return {
         success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "Network error. Please try again.",
+        error: this.handleCatchError(error, "Login"),
       };
     }
   }
 
   static async checkEmail(email: string): Promise<CheckEmailResponse> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/check-email`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email }),
-        credentials: "include",
-      });
-
+      const response = await this.makeAuthRequest("check-email", { email });
       const data = await response.json();
 
       if (response.ok) {
-        // Email is available
         return {
           success: true,
           available: true,
           message: data.message || "Email is available",
         };
       } else {
-        // Email already exists or other error
         return {
           success: false,
           available: false,
@@ -96,29 +113,17 @@ export class AuthService {
         };
       }
     } catch (error) {
-      console.error("Email check error:", error);
       return {
         success: false,
         available: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "Network error. Please try again.",
+        error: this.handleCatchError(error, "Email check"),
       };
     }
   }
 
   static async register(userData: RegisterRequest): Promise<RegisterResponse> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(userData),
-        credentials: "include",
-      });
-
+      const response = await this.makeAuthRequest("register", userData);
       const data = await response.json();
 
       if (response.ok) {
@@ -133,13 +138,9 @@ export class AuthService {
         };
       }
     } catch (error) {
-      console.error("Registration error:", error);
       return {
         success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "Network error. Please try again.",
+        error: this.handleCatchError(error, "Registration"),
       };
     }
   }
