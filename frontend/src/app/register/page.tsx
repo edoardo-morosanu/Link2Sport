@@ -309,8 +309,15 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4 transition-colors duration-300">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-25 to-teal-50 dark:from-slate-900 dark:via-purple-950 dark:to-slate-800 flex items-center justify-center p-4 transition-all duration-300 relative overflow-hidden">
+      {/* Animated background elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/10 to-purple-600/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-tr from-teal-400/8 to-blue-600/8 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-gradient-to-r from-purple-400/5 to-pink-600/5 rounded-full blur-2xl animate-pulse delay-500"></div>
+      </div>
+
+      <div className="w-full max-w-md relative z-10">
         {/* Logo and Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
@@ -319,7 +326,7 @@ export default function RegisterPage() {
               alt="Link2Sport Logo"
               width={48}
               height={48}
-              className="mr-3 shadow-lg transform hover:scale-105 transition-transform duration-200"
+              className="mr-3 shadow-lg transform hover:scale-105 transition-all duration-200"
             />
             <div>
               <h1 className="text-3xl font-bold text-gray-900 dark:text-white transition-colors duration-200">
@@ -333,464 +340,472 @@ export default function RegisterPage() {
         </div>
 
         {/* Registration Form */}
-        <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/20 dark:border-gray-700/20 p-8 transition-all duration-300 hover:shadow-2xl">
-          {/* Progress Indicator */}
-          <div className="flex items-center justify-center space-x-2 mb-8">
-            <div className="flex items-center">
-              <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-300 ${
-                  step >= 1
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-200 dark:bg-gray-600 text-gray-500 dark:text-gray-400"
-                }`}
-              >
-                1
-              </div>
-              <div
-                className={`w-8 h-1 rounded-full transition-all duration-300 ${
-                  step >= 2 ? "bg-blue-600" : "bg-gray-200 dark:bg-gray-600"
-                }`}
-              ></div>
-              <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-300 ${
-                  step >= 2
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-200 dark:bg-gray-600 text-gray-500 dark:text-gray-400"
-                }`}
-              >
-                2
-              </div>
-              <div
-                className={`w-8 h-1 rounded-full transition-all duration-300 ${
-                  step >= 3 ? "bg-blue-600" : "bg-gray-200 dark:bg-gray-600"
-                }`}
-              ></div>
-              <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-300 ${
-                  step >= 3
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-200 dark:bg-gray-600 text-gray-500 dark:text-gray-400"
-                }`}
-              >
-                3
-              </div>
-              <div
-                className={`w-8 h-1 rounded-full transition-all duration-300 ${
-                  step >= 4 ? "bg-blue-600" : "bg-gray-200 dark:bg-gray-600"
-                }`}
-              ></div>
-              <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-300 ${
-                  step >= 4
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-200 dark:bg-gray-600 text-gray-500 dark:text-gray-400"
-                }`}
-              >
-                4
-              </div>
-            </div>
-          </div>
+        <div className="relative">
+          {/* Main glass container */}
+          <div className="relative bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/20 p-8 transition-all duration-300">
+            {/* Inner gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-blue-500/2 dark:from-gray-700/5 dark:to-purple-500/2 rounded-2xl pointer-events-none"></div>
 
-          {step === 1 ? (
-            <form onSubmit={handleNextStep} className="space-y-6">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white text-center mb-6">
-                What's your email?
-              </h2>
-
-              {/* Error Message */}
-              {error && (
-                <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded-xl p-4 animate-in slide-in-from-top-2 duration-300">
-                  <p className="text-red-600 dark:text-red-400 text-sm font-medium">
-                    {error}
-                  </p>
-                </div>
-              )}
-
-              {/* Email Input */}
-              <div className="relative group">
-                <input
-                  type="email"
-                  placeholder="Enter your email address"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="w-full px-4 py-4 bg-gray-50 dark:bg-gray-700/50 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 hover:border-gray-300 dark:hover:border-gray-500 group-hover:shadow-md"
-                />
-                <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-              </div>
-
-              {/* Next Button */}
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 dark:from-blue-500 dark:to-blue-600 dark:hover:from-blue-600 dark:hover:to-blue-700 text-white font-semibold py-4 px-4 rounded-xl transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl active:scale-[0.98] relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-purple-600/20 to-pink-600/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                <span className="relative z-10">
-                  {isLoading ? "Checking Email..." : "Next"}
-                </span>
-              </button>
-
-              {/* Back to Login */}
-              <div className="text-center">
-                <Link
-                  href="/login"
-                  className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors duration-200 hover:underline underline-offset-4"
-                >
-                  Already have an account? Sign in
-                </Link>
-              </div>
-            </form>
-          ) : step === 2 ? (
-            <form onSubmit={handleStep2Next} className="space-y-6">
-              <div className="text-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  Tell us about yourself
-                </h2>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-                  {email}
-                </p>
-              </div>
-
-              {/* Error Message */}
-              {error && (
-                <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded-xl p-4 animate-in slide-in-from-top-2 duration-300">
-                  <p className="text-red-600 dark:text-red-400 text-sm font-medium">
-                    {error}
-                  </p>
-                </div>
-              )}
-
-              {/* Name Fields */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="relative group">
-                  <input
-                    type="text"
-                    placeholder="First name"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    required
-                    className="w-full px-4 py-4 bg-gray-50 dark:bg-gray-700/50 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 hover:border-gray-300 dark:hover:border-gray-500 group-hover:shadow-md"
-                  />
-                  <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-                </div>
-                <div className="relative group">
-                  <input
-                    type="text"
-                    placeholder="Last name"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    required
-                    className="w-full px-4 py-4 bg-gray-50 dark:bg-gray-700/50 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 hover:border-gray-300 dark:hover:border-gray-500 group-hover:shadow-md"
-                  />
-                  <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-                </div>
-              </div>
-
-              {/* Username Input */}
-              <div className="relative group">
-                <input
-                  type="text"
-                  placeholder="Username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  required
-                  className="w-full px-4 py-4 bg-gray-50 dark:bg-gray-700/50 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 hover:border-gray-300 dark:hover:border-gray-500 group-hover:shadow-md"
-                />
-
-                <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-              </div>
-
-              {/* Location Input */}
-              <div className="relative group">
-                <input
-                  type="text"
-                  placeholder="Location (e.g., New York, NY)"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  required
-                  className="w-full px-4 py-4 bg-gray-50 dark:bg-gray-700/50 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 hover:border-gray-300 dark:hover:border-gray-500 group-hover:shadow-md"
-                />
-                <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="space-y-4">
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 dark:from-blue-500 dark:to-blue-600 dark:hover:from-blue-600 dark:hover:to-blue-700 text-white font-semibold py-4 px-4 rounded-xl transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl active:scale-[0.98] relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-purple-600/20 to-pink-600/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                  <span className="relative z-10">Next</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setStep(1)}
-                  disabled={isLoading}
-                  className="w-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-semibold py-4 px-4 rounded-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-                >
-                  Back
-                </button>
-              </div>
-            </form>
-          ) : step === 3 ? (
-            <form onSubmit={handleStep3Next} className="space-y-6">
-              <div className="text-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  Sports & Security
-                </h2>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-                  {firstName} {lastName} • {email}
-                </p>
-              </div>
-
-              {/* Error Message */}
-              {error && (
-                <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded-xl p-4 animate-in slide-in-from-top-2 duration-300">
-                  <p className="text-red-600 dark:text-red-400 text-sm font-medium">
-                    {error}
-                  </p>
-                </div>
-              )}
-
-              {/* Sports Selection - Inline Tag Input */}
-              <div className="space-y-3">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Sports Interests
-                </label>
-
-                {/* Combined Tags and Input */}
-                <div className="relative">
-                  <div className="min-h-[60px] p-3 bg-gray-50 dark:bg-gray-700/50 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition-all duration-300">
-                    <div className="flex flex-wrap gap-2 items-center">
-                      {/* Selected Sports Tags */}
-                      {sports.map((sport) => (
-                        <span
-                          key={sport}
-                          className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 group"
-                        >
-                          {sport}
-                          <button
-                            type="button"
-                            onClick={() => handleSportRemove(sport)}
-                            className="ml-2 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 focus:outline-none"
-                          >
-                            ×
-                          </button>
-                        </span>
-                      ))}
-
-                      {/* Inline Input */}
-                      <input
-                        type="text"
-                        placeholder={
-                          sports.length === 0
-                            ? "Type to add sports..."
-                            : "Add more..."
-                        }
-                        value={sportInput}
-                        onChange={(e) => setSportInput(e.target.value)}
-                        onKeyDown={handleSportInputKeyPress}
-                        onFocus={() => setShowSportsDropdown(true)}
-                        onBlur={(e) => {
-                          // Delay hiding to allow clicking on dropdown items
-                          setTimeout(() => setShowSportsDropdown(false), 150);
-                        }}
-                        className="flex-1 min-w-[150px] bg-transparent border-none outline-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-                      />
-                    </div>
+            {/* Content */}
+            <div className="relative z-10">
+              {/* Progress Indicator */}
+              <div className="flex items-center justify-center space-x-2 mb-8">
+                <div className="flex items-center">
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-300 ${
+                      step >= 1
+                        ? "bg-blue-600 text-white"
+                        : "bg-gray-200 dark:bg-gray-600 text-gray-500 dark:text-gray-400"
+                    }`}
+                  >
+                    1
                   </div>
+                  <div
+                    className={`w-8 h-1 rounded-full transition-all duration-300 ${
+                      step >= 2 ? "bg-blue-600" : "bg-gray-200 dark:bg-gray-600"
+                    }`}
+                  ></div>
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-300 ${
+                      step >= 2
+                        ? "bg-blue-600 text-white"
+                        : "bg-gray-200 dark:bg-gray-600 text-gray-500 dark:text-gray-400"
+                    }`}
+                  >
+                    2
+                  </div>
+                  <div
+                    className={`w-8 h-1 rounded-full transition-all duration-300 ${
+                      step >= 3 ? "bg-blue-600" : "bg-gray-200 dark:bg-gray-600"
+                    }`}
+                  ></div>
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-300 ${
+                      step >= 3
+                        ? "bg-blue-600 text-white"
+                        : "bg-gray-200 dark:bg-gray-600 text-gray-500 dark:text-gray-400"
+                    }`}
+                  >
+                    3
+                  </div>
+                  <div
+                    className={`w-8 h-1 rounded-full transition-all duration-300 ${
+                      step >= 4 ? "bg-blue-600" : "bg-gray-200 dark:bg-gray-600"
+                    }`}
+                  ></div>
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-300 ${
+                      step >= 4
+                        ? "bg-blue-600 text-white"
+                        : "bg-gray-200 dark:bg-gray-600 text-gray-500 dark:text-gray-400"
+                    }`}
+                  >
+                    4
+                  </div>
+                </div>
+              </div>
 
-                  {/* Filtered Sports Dropdown (when typing) */}
-                  {sportInput && getFilteredSports().length > 0 && (
-                    <div className="absolute z-20 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg max-h-40 overflow-y-auto">
-                      {getFilteredSports()
-                        .slice(0, 8)
-                        .map((sport) => (
-                          <button
-                            key={sport}
-                            type="button"
-                            onClick={() => handleSportAdd(sport)}
-                            className="w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white transition-colors duration-200 first:rounded-t-xl last:rounded-b-xl"
-                          >
-                            {sport}
-                          </button>
-                        ))}
+              {step === 1 ? (
+                <form onSubmit={handleNextStep} className="space-y-6">
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white text-center mb-6">
+                    What&apos;s your email?
+                  </h2>
+
+                  {/* Error Message */}
+                  {error && (
+                    <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded-xl p-4 animate-in slide-in-from-top-2 duration-300">
+                      <p className="text-red-600 dark:text-red-400 text-sm font-medium">
+                        {error}
+                      </p>
                     </div>
                   )}
 
-                  {/* All Sports Dropdown */}
-                  {showSportsDropdown &&
-                    !sportInput &&
-                    getAvailableSports().length > 0 && (
-                      <div className="absolute z-20 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg max-h-60 overflow-y-auto">
-                        <div className="px-4 py-2 bg-gray-50 dark:bg-gray-700/50 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-600">
-                          Available Sports
-                        </div>
-                        <div className="grid grid-cols-2 gap-1 p-2">
-                          {getAvailableSports().map((sport) => (
-                            <button
+                  {/* Email Input */}
+                  <div className="relative group">
+                    <input
+                      type="email"
+                      placeholder="Enter your email address"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      className="w-full px-4 py-4 bg-gray-50 dark:bg-gray-700/50 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 hover:border-gray-300 dark:hover:border-gray-500"
+                    />
+                  </div>
+
+                  {/* Next Button */}
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 dark:from-blue-500 dark:to-blue-600 dark:hover:from-blue-600 dark:hover:to-blue-700 text-white font-semibold py-4 px-4 rounded-xl transition-all duration-200 transform hover:scale-[1.01] hover:shadow-lg active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                  >
+                    {isLoading ? "Checking Email..." : "Next"}
+                  </button>
+
+                  {/* Back to Login */}
+                  <div className="text-center">
+                    <Link
+                      href="/login"
+                      className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors duration-200 hover:underline underline-offset-4"
+                    >
+                      Already have an account? Sign in
+                    </Link>
+                  </div>
+                </form>
+              ) : step === 2 ? (
+                <form onSubmit={handleStep2Next} className="space-y-6">
+                  <div className="text-center mb-6">
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                      Tell us about yourself
+                    </h2>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                      {email}
+                    </p>
+                  </div>
+
+                  {/* Error Message */}
+                  {error && (
+                    <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded-xl p-4 animate-in slide-in-from-top-2 duration-300">
+                      <p className="text-red-600 dark:text-red-400 text-sm font-medium">
+                        {error}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Name Fields */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="relative group">
+                      <input
+                        type="text"
+                        placeholder="First name"
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        required
+                        className="w-full px-4 py-4 bg-gray-50 dark:bg-gray-700/50 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 hover:border-gray-300 dark:hover:border-gray-500 group-hover:shadow-md"
+                      />
+                      <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+                    </div>
+                    <div className="relative group">
+                      <input
+                        type="text"
+                        placeholder="Last name"
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        required
+                        className="w-full px-4 py-4 bg-gray-50 dark:bg-gray-700/50 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 hover:border-gray-300 dark:hover:border-gray-500 group-hover:shadow-md"
+                      />
+                      <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+                    </div>
+                  </div>
+
+                  {/* Username Input */}
+                  <div className="relative group">
+                    <input
+                      type="text"
+                      placeholder="Username"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      required
+                      className="w-full px-4 py-4 bg-gray-50 dark:bg-gray-700/50 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 hover:border-gray-300 dark:hover:border-gray-500 group-hover:shadow-md"
+                    />
+
+                    <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+                  </div>
+
+                  {/* Location Input */}
+                  <div className="relative group">
+                    <input
+                      type="text"
+                      placeholder="Location (e.g., New York, NY)"
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                      required
+                      className="w-full px-4 py-4 bg-gray-50 dark:bg-gray-700/50 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 hover:border-gray-300 dark:hover:border-gray-500 group-hover:shadow-md"
+                    />
+                    <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="space-y-4">
+                    <button
+                      type="submit"
+                      disabled={isLoading}
+                      className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 dark:from-blue-500 dark:to-blue-600 dark:hover:from-blue-600 dark:hover:to-blue-700 text-white font-semibold py-4 px-4 rounded-xl transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl active:scale-[0.98] relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-purple-600/20 to-pink-600/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                      <span className="relative z-10">Next</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setStep(1)}
+                      disabled={isLoading}
+                      className="w-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-semibold py-4 px-4 rounded-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                    >
+                      Back
+                    </button>
+                  </div>
+                </form>
+              ) : step === 3 ? (
+                <form onSubmit={handleStep3Next} className="space-y-6">
+                  <div className="text-center mb-6">
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                      Sports & Security
+                    </h2>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                      {firstName} {lastName} • {email}
+                    </p>
+                  </div>
+
+                  {/* Error Message */}
+                  {error && (
+                    <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded-xl p-4 animate-in slide-in-from-top-2 duration-300">
+                      <p className="text-red-600 dark:text-red-400 text-sm font-medium">
+                        {error}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Sports Selection - Inline Tag Input */}
+                  <div className="space-y-3">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Sports Interests
+                    </label>
+
+                    {/* Combined Tags and Input */}
+                    <div className="relative">
+                      <div className="min-h-[60px] p-3 bg-gray-50 dark:bg-gray-700/50 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition-all duration-300">
+                        <div className="flex flex-wrap gap-2 items-center">
+                          {/* Selected Sports Tags */}
+                          {sports.map((sport) => (
+                            <span
                               key={sport}
-                              type="button"
-                              onMouseDown={() => handleSportAdd(sport)}
-                              className="px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white transition-colors duration-200 rounded-lg text-sm"
+                              className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 group"
                             >
                               {sport}
-                            </button>
+                              <button
+                                type="button"
+                                onClick={() => handleSportRemove(sport)}
+                                className="ml-2 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 focus:outline-none"
+                              >
+                                ×
+                              </button>
+                            </span>
                           ))}
+
+                          {/* Inline Input */}
+                          <input
+                            type="text"
+                            placeholder={
+                              sports.length === 0
+                                ? "Type to add sports..."
+                                : "Add more..."
+                            }
+                            value={sportInput}
+                            onChange={(e) => setSportInput(e.target.value)}
+                            onKeyDown={handleSportInputKeyPress}
+                            onFocus={() => setShowSportsDropdown(true)}
+                            onBlur={() => {
+                              // Delay hiding to allow clicking on dropdown items
+                              setTimeout(
+                                () => setShowSportsDropdown(false),
+                                150,
+                              );
+                            }}
+                            className="flex-1 min-w-[150px] bg-transparent border-none outline-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                          />
                         </div>
                       </div>
-                    )}
-                </div>
 
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Selected: {sports.length} sport
-                  {sports.length !== 1 ? "s" : ""} • Type to search, press Enter
-                  to add, or use backspace to remove
-                </p>
-              </div>
+                      {/* Filtered Sports Dropdown (when typing) */}
+                      {sportInput && getFilteredSports().length > 0 && (
+                        <div className="absolute z-20 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg max-h-40 overflow-y-auto">
+                          {getFilteredSports()
+                            .slice(0, 8)
+                            .map((sport) => (
+                              <button
+                                key={sport}
+                                type="button"
+                                onClick={() => handleSportAdd(sport)}
+                                className="w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white transition-colors duration-200 first:rounded-t-xl last:rounded-b-xl"
+                              >
+                                {sport}
+                              </button>
+                            ))}
+                        </div>
+                      )}
 
-              {/* Password Input */}
-              <div className="relative group">
-                <input
-                  type="password"
-                  placeholder="Password (minimum 8 characters)"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="w-full px-4 py-4 bg-gray-50 dark:bg-gray-700/50 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 hover:border-gray-300 dark:hover:border-gray-500 group-hover:shadow-md"
-                />
-                <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-              </div>
+                      {/* All Sports Dropdown */}
+                      {showSportsDropdown &&
+                        !sportInput &&
+                        getAvailableSports().length > 0 && (
+                          <div className="absolute z-20 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg max-h-60 overflow-y-auto">
+                            <div className="px-4 py-2 bg-gray-50 dark:bg-gray-700/50 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-600">
+                              Available Sports
+                            </div>
+                            <div className="grid grid-cols-2 gap-1 p-2">
+                              {getAvailableSports().map((sport) => (
+                                <button
+                                  key={sport}
+                                  type="button"
+                                  onMouseDown={() => handleSportAdd(sport)}
+                                  className="px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white transition-colors duration-200 rounded-lg text-sm"
+                                >
+                                  {sport}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                    </div>
 
-              {/* Confirm Password Input */}
-              <div className="relative group">
-                <input
-                  type="password"
-                  placeholder="Confirm password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  className="w-full px-4 py-4 bg-gray-50 dark:bg-gray-700/50 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 hover:border-gray-300 dark:hover:border-gray-500 group-hover:shadow-md"
-                />
-                <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-              </div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Selected: {sports.length} sport
+                      {sports.length !== 1 ? "s" : ""} • Type to search, press
+                      Enter to add, or use backspace to remove
+                    </p>
+                  </div>
 
-              {/* Action Buttons */}
-              <div className="space-y-4">
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 dark:from-blue-500 dark:to-blue-600 dark:hover:from-blue-600 dark:hover:to-blue-700 text-white font-semibold py-4 px-4 rounded-xl transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl active:scale-[0.98] relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-purple-600/20 to-pink-600/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                  <span className="relative z-10">
-                    {isLoading ? "Checking Username..." : "Next"}
-                  </span>
-                </button>
+                  {/* Password Input */}
+                  <div className="relative group">
+                    <input
+                      type="password"
+                      placeholder="Password (minimum 8 characters)"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      className="w-full px-4 py-4 bg-gray-50 dark:bg-gray-700/50 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 hover:border-gray-300 dark:hover:border-gray-500 group-hover:shadow-md"
+                    />
+                    <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+                  </div>
 
-                <button
-                  type="button"
-                  onClick={() => setStep(2)}
-                  disabled={isLoading}
-                  className="w-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-semibold py-4 px-4 rounded-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-                >
-                  Back
-                </button>
-              </div>
-            </form>
-          ) : (
-            <form onSubmit={handleRegister} className="space-y-6">
-              <div className="text-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  Complete Your Profile
-                </h2>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-                  {firstName} {lastName} • {email}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                  Add a profile picture and bio (both optional)
-                </p>
-              </div>
+                  {/* Confirm Password Input */}
+                  <div className="relative group">
+                    <input
+                      type="password"
+                      placeholder="Confirm password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      required
+                      className="w-full px-4 py-4 bg-gray-50 dark:bg-gray-700/50 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 hover:border-gray-300 dark:hover:border-gray-500 group-hover:shadow-md"
+                    />
+                    <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+                  </div>
 
-              {/* Error Message */}
-              {error && (
-                <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded-xl p-4 animate-in slide-in-from-top-2 duration-300">
-                  <p className="text-red-600 dark:text-red-400 text-sm font-medium">
-                    {error}
-                  </p>
-                </div>
+                  {/* Action Buttons */}
+                  <div className="space-y-4">
+                    <button
+                      type="submit"
+                      disabled={isLoading}
+                      className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 dark:from-blue-500 dark:to-blue-600 dark:hover:from-blue-600 dark:hover:to-blue-700 text-white font-semibold py-4 px-4 rounded-xl transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl active:scale-[0.98] relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-purple-600/20 to-pink-600/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                      <span className="relative z-10">
+                        {isLoading ? "Checking Username..." : "Next"}
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setStep(2)}
+                      disabled={isLoading}
+                      className="w-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-semibold py-4 px-4 rounded-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                    >
+                      Back
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <form onSubmit={handleRegister} className="space-y-6">
+                  <div className="text-center mb-6">
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                      Complete Your Profile
+                    </h2>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                      {firstName} {lastName} • {email}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                      Add a profile picture and bio (both optional)
+                    </p>
+                  </div>
+
+                  {/* Error Message */}
+                  {error && (
+                    <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded-xl p-4 animate-in slide-in-from-top-2 duration-300">
+                      <p className="text-red-600 dark:text-red-400 text-sm font-medium">
+                        {error}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Profile Picture Upload (Optional) */}
+                  <div className="space-y-3">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 text-center">
+                      Profile Picture{" "}
+                      <span className="text-gray-500 dark:text-gray-400">
+                        (optional)
+                      </span>
+                    </label>
+                    <AvatarUpload
+                      onAvatarChange={setAvatar}
+                      showUploadButton={false}
+                      showDeleteButton={false}
+                      size="lg"
+                      className="justify-center"
+                    />
+                  </div>
+
+                  {/* Bio Input (Optional) */}
+                  <div className="space-y-3">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Bio{" "}
+                      <span className="text-gray-500 dark:text-gray-400">
+                        (optional)
+                      </span>
+                    </label>
+                    <div className="relative group">
+                      <textarea
+                        placeholder="Tell us about yourself, your interests, or what sports you're passionate about..."
+                        value={bio}
+                        onChange={(e) => setBio(e.target.value)}
+                        rows={4}
+                        maxLength={250}
+                        className="w-full px-4 py-4 bg-gray-50 dark:bg-gray-700/50 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 hover:border-gray-300 dark:hover:border-gray-500 group-hover:shadow-md resize-none"
+                      />
+                      <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 text-right">
+                      {bio.length}/250 characters
+                    </p>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="space-y-4">
+                    <button
+                      type="submit"
+                      disabled={isLoading}
+                      className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 dark:from-green-500 dark:to-green-600 dark:hover:from-green-600 dark:hover:to-green-700 text-white font-semibold py-4 px-4 rounded-xl transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl active:scale-[0.98] relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-emerald-600/20 to-teal-600/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                      <span className="relative z-10">
+                        {isLoading
+                          ? "Creating Account..."
+                          : "Complete Registration"}
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setStep(3)}
+                      disabled={isLoading}
+                      className="w-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-semibold py-4 px-4 rounded-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                    >
+                      Back
+                    </button>
+                  </div>
+                </form>
               )}
-
-              {/* Profile Picture Upload (Optional) */}
-              <div className="space-y-3">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 text-center">
-                  Profile Picture{" "}
-                  <span className="text-gray-500 dark:text-gray-400">
-                    (optional)
-                  </span>
-                </label>
-                <AvatarUpload
-                  onAvatarChange={setAvatar}
-                  showUploadButton={false}
-                  showDeleteButton={false}
-                  size="lg"
-                  className="justify-center"
-                />
-              </div>
-
-              {/* Bio Input (Optional) */}
-              <div className="space-y-3">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Bio{" "}
-                  <span className="text-gray-500 dark:text-gray-400">
-                    (optional)
-                  </span>
-                </label>
-                <div className="relative group">
-                  <textarea
-                    placeholder="Tell us about yourself, your interests, or what sports you're passionate about..."
-                    value={bio}
-                    onChange={(e) => setBio(e.target.value)}
-                    rows={4}
-                    maxLength={250}
-                    className="w-full px-4 py-4 bg-gray-50 dark:bg-gray-700/50 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 hover:border-gray-300 dark:hover:border-gray-500 group-hover:shadow-md resize-none"
-                  />
-                  <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-                </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 text-right">
-                  {bio.length}/250 characters
-                </p>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="space-y-4">
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 dark:from-green-500 dark:to-green-600 dark:hover:from-green-600 dark:hover:to-green-700 text-white font-semibold py-4 px-4 rounded-xl transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl active:scale-[0.98] relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-emerald-600/20 to-teal-600/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                  <span className="relative z-10">
-                    {isLoading
-                      ? "Creating Account..."
-                      : "Complete Registration"}
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setStep(3)}
-                  disabled={isLoading}
-                  className="w-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-semibold py-4 px-4 rounded-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-                >
-                  Back
-                </button>
-              </div>
-            </form>
-          )}
+            </div>
+          </div>
         </div>
 
         {/* Footer */}
