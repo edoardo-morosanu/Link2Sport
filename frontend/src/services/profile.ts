@@ -53,9 +53,33 @@ export class ProfileService {
     }
   }
   static async getProfile() {
-    return await this.makeAuthenticatedRequest(`${API_BASE_URL}/api/profile`, {
-      method: "GET",
-    });
+    const response = (await this.makeAuthenticatedRequest(
+      `${API_BASE_URL}/api/profile`,
+      {
+        method: "GET",
+      },
+    )) as any;
+
+    // Map backend response to frontend types
+    return {
+      id: response.id?.toString() || "",
+      username: response.username || "",
+      name: response.display_name || response.username || "",
+      email: response.email || "",
+      bio: response.bio || "",
+      location: response.city
+        ? `${response.city}${response.country ? `, ${response.country}` : ""}`
+        : "",
+      followersCount: response.followers_count || 0,
+      followingCount: response.following_count || 0,
+      activitiesCount: 0, // This would come from a separate API call
+      profilePicture: response.avatar_url || "",
+      avatarUrl: response.avatar_url
+        ? `${API_BASE_URL}${response.avatar_url}`
+        : "",
+      hasAvatar: response.has_avatar || false,
+      sports: response.sports || [],
+    };
   }
 
   static async updateProfile(profileData: unknown) {

@@ -49,7 +49,7 @@ export class SearchService {
 
   static async getUserProfile(userId: number): Promise<PublicUserProfile> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/users/${userId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/profile/${userId}`, {
         method: "GET",
         headers: this.getAuthHeaders(),
         credentials: "include",

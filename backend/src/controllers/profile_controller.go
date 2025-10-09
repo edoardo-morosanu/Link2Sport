@@ -56,19 +56,26 @@ func (pc *ProfileController) GetProfile(c *gin.Context) {
 	hasAvatar := len(user.AvatarData) > 0
 	avatarURL := fmt.Sprintf("/api/user/%d/avatar", user.ID) // Always provide URL, will serve default if needed
 
+	// Get follower and following counts
+	var followersCount, followingCount int64
+	config.DB.Model(&models.Follow{}).Where("followed_id = ?", user.ID).Count(&followersCount)
+	config.DB.Model(&models.Follow{}).Where("follower_id = ?", user.ID).Count(&followingCount)
+
 	profile := types.ProfileResponse{
-		ID:          user.ID,
-		Username:    user.Username,
-		Email:       user.Email,
-		DisplayName: user.DisplayName,
-		Bio:         user.Bio,
-		City:        user.City,
-		Country:     user.Country,
-		Sports:      sports,
-		AvatarURL:   avatarURL,
-		HasAvatar:   hasAvatar,
-		CreatedAt:   user.CreatedAt,
-		UpdatedAt:   user.UpdatedAt,
+		ID:             user.ID,
+		Username:       user.Username,
+		Email:          user.Email,
+		DisplayName:    user.DisplayName,
+		Bio:            user.Bio,
+		City:           user.City,
+		Country:        user.Country,
+		Sports:         sports,
+		AvatarURL:      avatarURL,
+		HasAvatar:      hasAvatar,
+		FollowersCount: int(followersCount),
+		FollowingCount: int(followingCount),
+		CreatedAt:      user.CreatedAt,
+		UpdatedAt:      user.UpdatedAt,
 	}
 
 	c.JSON(http.StatusOK, profile)
@@ -136,23 +143,31 @@ func (pc *ProfileController) GetPublicProfile(c *gin.Context) {
 	hasAvatar := len(user.AvatarData) > 0
 	avatarURL := fmt.Sprintf("/api/user/%d/avatar", user.ID)
 
-	// TODO: Check if current user is following this user
-	// This would require a follows table and relationship
-	isFollowing := false
+	// Check if current user is following this user
+	var followCount int64
+	config.DB.Model(&models.Follow{}).Where("follower_id = ? AND followed_id = ?", currentUserID, targetUserID).Count(&followCount)
+	isFollowing := followCount > 0
+
+	// Get follower and following counts for the target user
+	var followersCount, followingCount int64
+	config.DB.Model(&models.Follow{}).Where("followed_id = ?", targetUserID).Count(&followersCount)
+	config.DB.Model(&models.Follow{}).Where("follower_id = ?", targetUserID).Count(&followingCount)
 
 	profile := types.PublicProfileResponse{
-		ID:          user.ID,
-		Username:    user.Username,
-		DisplayName: user.DisplayName,
-		Bio:         user.Bio,
-		City:        user.City,
-		Country:     user.Country,
-		Sports:      sports,
-		AvatarURL:   avatarURL,
-		HasAvatar:   hasAvatar,
-		CreatedAt:   user.CreatedAt,
-		UpdatedAt:   user.UpdatedAt,
-		IsFollowing: isFollowing,
+		ID:             user.ID,
+		Username:       user.Username,
+		DisplayName:    user.DisplayName,
+		Bio:            user.Bio,
+		City:           user.City,
+		Country:        user.Country,
+		Sports:         sports,
+		AvatarURL:      avatarURL,
+		HasAvatar:      hasAvatar,
+		FollowersCount: int(followersCount),
+		FollowingCount: int(followingCount),
+		CreatedAt:      user.CreatedAt,
+		UpdatedAt:      user.UpdatedAt,
+		IsFollowing:    isFollowing,
 	}
 
 	c.JSON(http.StatusOK, profile)

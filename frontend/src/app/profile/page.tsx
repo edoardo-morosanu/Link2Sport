@@ -12,6 +12,7 @@ import { PostsTab } from "@/components/profile/PostsTab";
 import { ActivitiesTab } from "@/components/profile/ActivitiesTab";
 import { MediaTab } from "@/components/profile/MediaTab";
 import { EditProfileModal } from "@/components/profile/EditProfileModal";
+import { FollowersModal, FollowingModal } from "@/components/Follow";
 
 // Loading state component
 function ProfileLoadingState() {
@@ -70,6 +71,9 @@ function ProfileContent({
   posts,
   activities,
   setIsEditModalOpen,
+  setShowFollowersModal,
+  setShowFollowingModal,
+  router,
 }: {
   profile: UserProfile;
   activeTab: "posts" | "activities" | "media";
@@ -77,6 +81,9 @@ function ProfileContent({
   posts: ProfilePost[];
   activities: ProfileActivity[];
   setIsEditModalOpen: (open: boolean) => void;
+  setShowFollowersModal: (open: boolean) => void;
+  setShowFollowingModal: (open: boolean) => void;
+  router: any;
 }) {
   const renderTabContent = () => {
     switch (activeTab) {
@@ -107,6 +114,8 @@ function ProfileContent({
             hasAvatar={profile.hasAvatar}
             userId={profile.id}
             onEditProfile={() => setIsEditModalOpen(true)}
+            onFollowersClick={() => setShowFollowersModal(true)}
+            onFollowingClick={() => setShowFollowingModal(true)}
           />
           <ProfileTabs activeTab={activeTab} onTabChange={setActiveTab} />
           <div className="p-6">{renderTabContent()}</div>
@@ -130,6 +139,8 @@ export default function ProfilePage() {
     "posts",
   );
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [showFollowersModal, setShowFollowersModal] = useState(false);
+  const [showFollowingModal, setShowFollowingModal] = useState(false);
   const [posts, setPosts] = useState<ProfilePost[]>([]);
   const [activities, setActivities] = useState<ProfileActivity[]>([]);
 
@@ -212,12 +223,37 @@ export default function ProfilePage() {
         posts={posts}
         activities={activities}
         setIsEditModalOpen={setIsEditModalOpen}
+        setShowFollowersModal={setShowFollowersModal}
+        setShowFollowingModal={setShowFollowingModal}
+        router={router}
       />
       <EditProfileModal
         isOpen={isEditModalOpen}
         profile={profile}
         onClose={() => setIsEditModalOpen(false)}
         onSave={handleEditProfile}
+      />
+
+      <FollowersModal
+        isOpen={showFollowersModal}
+        userId={parseInt(profile.id)}
+        onClose={() => setShowFollowersModal(false)}
+        onUserClick={(user) => {
+          setShowFollowersModal(false);
+          router.push(`/user/${user.id}`);
+        }}
+        showFollowButtons={true}
+      />
+
+      <FollowingModal
+        isOpen={showFollowingModal}
+        userId={parseInt(profile.id)}
+        onClose={() => setShowFollowingModal(false)}
+        onUserClick={(user) => {
+          setShowFollowingModal(false);
+          router.push(`/user/${user.id}`);
+        }}
+        showFollowButtons={true}
       />
     </>
   );

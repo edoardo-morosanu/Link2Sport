@@ -68,7 +68,7 @@ func main() {
 	defer config.CloseDatabase()
 
 	// Run database migrations
-	if err := config.AutoMigrate(&models.User{}); err != nil {
+	if err := config.AutoMigrate(&models.User{}, &models.Follow{}); err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}
 
@@ -98,12 +98,14 @@ func main() {
 	profileController := controllers.NewProfileController()
 	uploadController := controllers.NewUploadController()
 	searchController := controllers.NewSearchController()
+	followController := controllers.NewFollowController()
 
 	// Setup routes
 	routes.SetupAuthRoutes(r, authController)
 	routes.SetupProfileRoutes(r, profileController)
 	routes.SetupUploadRoutes(r, uploadController)
 	routes.SetupSearchRoutes(r, searchController)
+	routes.SetupFollowRoutes(r, followController)
 
 	// API v1 routes (existing routes)
 	v1 := r.Group("/api/v1")

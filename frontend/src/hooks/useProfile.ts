@@ -19,26 +19,25 @@ export const useProfile = (): UseProfileReturn => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const transformApiResponse = (
-    apiProfile: ApiProfileResponse,
-  ): UserProfile => {
+  const transformApiResponse = (apiProfile: any): UserProfile => {
     return {
-      id: apiProfile.id.toString(),
-      username: apiProfile.username,
-      name: apiProfile.display_name || `${apiProfile.username}`,
-      email: apiProfile.email,
+      id: apiProfile.id?.toString() || "",
+      username: apiProfile.username || "",
+      name:
+        apiProfile.name || apiProfile.display_name || apiProfile.username || "",
+      email: apiProfile.email || "",
       bio: apiProfile.bio || "",
-      location: [apiProfile.city, apiProfile.country]
-        .filter(Boolean)
-        .join(", "),
-      followersCount: 0, // These would come from additional API calls
-      followingCount: 0,
-      activitiesCount: 0,
+      location: apiProfile.location || "",
+      followersCount: apiProfile.followersCount || 0,
+      followingCount: apiProfile.followingCount || 0,
+      activitiesCount: apiProfile.activitiesCount || 0,
       sports: apiProfile.sports || [],
-      avatarUrl: apiProfile.has_avatar
-        ? AvatarService.getAvatarUrl(apiProfile.id)
-        : undefined,
-      hasAvatar: apiProfile.has_avatar,
+      avatarUrl:
+        apiProfile.avatarUrl ||
+        (apiProfile.has_avatar
+          ? AvatarService.getAvatarUrl(apiProfile.id)
+          : undefined),
+      hasAvatar: apiProfile.hasAvatar || false,
     };
   };
 
@@ -53,8 +52,8 @@ export const useProfile = (): UseProfileReturn => {
       setLoading(true);
       setError(null);
 
-      const apiProfile = await ProfileService.getProfile();
-      const transformedProfile = transformApiResponse(apiProfile);
+      const profileData = await ProfileService.getProfile();
+      const transformedProfile = transformApiResponse(profileData);
       setProfile(transformedProfile);
     } catch (err) {
       const errorMessage =
