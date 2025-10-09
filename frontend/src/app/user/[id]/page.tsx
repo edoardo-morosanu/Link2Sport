@@ -12,6 +12,11 @@ import { PostsTab } from "@/components/profile/PostsTab";
 import { ActivitiesTab } from "@/components/profile/ActivitiesTab";
 import { MediaTab } from "@/components/profile/MediaTab";
 import { ProfilePost, ProfileActivity } from "@/types/profile";
+import {
+  FollowButton,
+  FollowersModal,
+  FollowingModal,
+} from "@/components/Follow";
 
 export default function UserProfilePage() {
   const { user, isLoading: authLoading } = useAuth();
@@ -27,8 +32,8 @@ export default function UserProfilePage() {
   );
   const [posts, setPosts] = useState<ProfilePost[]>([]);
   const [activities, setActivities] = useState<ProfileActivity[]>([]);
-  const [isFollowing, setIsFollowing] = useState(false);
-  const [followLoading, setFollowLoading] = useState(false);
+  const [showFollowersModal, setShowFollowersModal] = useState(false);
+  const [showFollowingModal, setShowFollowingModal] = useState(false);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -56,7 +61,6 @@ export default function UserProfilePage() {
           parseInt(userId),
         );
         setProfile(userProfile);
-        setIsFollowing(userProfile.is_following || false);
       } catch (err) {
         console.error("Failed to fetch user profile:", err);
         setError("Failed to load user profile");
@@ -106,18 +110,16 @@ export default function UserProfilePage() {
     }
   }, [profile]);
 
-  const handleFollow = async () => {
-    if (!profile) return;
-
-    try {
-      setFollowLoading(true);
-      // TODO: Implement actual follow/unfollow API call
-      // await FollowService.toggleFollow(profile.id);
-      setIsFollowing(!isFollowing);
-    } catch (err) {
-      console.error("Failed to toggle follow:", err);
-    } finally {
-      setFollowLoading(false);
+  const handleFollowChange = (isFollowing: boolean) => {
+    // Update the profile's follow status and counts
+    if (profile) {
+      setProfile({
+        ...profile,
+        is_following: isFollowing,
+        followers_count: isFollowing
+          ? profile.followers_count + 1
+          : profile.followers_count - 1,
+      });
     }
   };
 
@@ -204,17 +206,130 @@ export default function UserProfilePage() {
 
       <div className="max-w-4xl mx-auto px-4 py-8">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm transition-colors duration-300">
-          <PublicProfileHeader
-            profile={profile}
-            isFollowing={isFollowing}
-            followLoading={followLoading}
-            onFollow={handleFollow}
-          />
+          <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="relative">
+                  {profile.has_avatar ? (
+                    <img
+                      src={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"}${profile.avatar_url}`}
+                      alt={`${profile.display_name}'s avatar`}
+                      className="w-24 h-24 rounded-full object-cover border-4 border-white dark:border-gray-700 shadow-lg"
+                    />
+                  ) : (
+                    <div className="w-24 h-24 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg">
+                      {profile.display_name?.charAt(0)?.toUpperCase() ||
+                        profile.username?.charAt(0)?.toUpperCase() ||
+                        "?"}
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <div>
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                      {profile.display_name || profile.username}
+                    </h1>
+                    <p className="text-gray-600 dark:text-gray-400">
+                      @{profile.username}
+                    </p>
+                  </div>
+
+                  {profile.bio && (
+                    <p className="text-gray-700 dark:text-gray-300 max-w-md">
+                      {profile.bio}
+                    </p>
+                  )}
+
+                  <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
+                    {profile.city && (
+                      <span className="flex items-center">
+                        📍 {profile.city}
+                        {profile.country && `, ${profile.country}`}
+                      </span>
+                    )}
+                    <span>
+                      Joined {new Date(profile.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center space-x-6">
+                    <button
+                      onClick={() => setShowFollowersModal(true)}
+                      className="text-sm hover:underline"
+                    >
+                      <span className="font-semibold text-gray-900 dark:text-white">
+                        {profile.followers_count}
+                      </span>{" "}
+                      <span className="text-gray-600 dark:text-gray-400">
+                        Followers
+                      </span>
+                    </button>
+                    <button
+                      onClick={() => setShowFollowingModal(true)}
+                      className="text-sm hover:underline"
+                    >
+                      <span className="font-semibold text-gray-900 dark:text-white">
+                        {profile.following_count}
+                      </span>{" "}
+                      <span className="text-gray-600 dark:text-gray-400">
+                        Following
+                      </span>
+                    </button>
+                  </div>
+
+                  {profile.sports && profile.sports.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {profile.sports.map((sport, index) => (
+                        <span
+                          key={index}
+                          className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs rounded-full"
+                        >
+                          {sport}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex-shrink-0">
+                <FollowButton
+                  userId={profile.id}
+                  initialFollowStatus={profile.is_following}
+                  onFollowChange={handleFollowChange}
+                  size="medium"
+                />
+              </div>
+            </div>
+          </div>
 
           <ProfileTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
           <div className="p-6">{renderTabContent()}</div>
         </div>
+
+        <FollowersModal
+          isOpen={showFollowersModal}
+          userId={profile.id}
+          onClose={() => setShowFollowersModal(false)}
+          onUserClick={(user) => {
+            setShowFollowersModal(false);
+            router.push(`/user/${user.id}`);
+          }}
+          showFollowButtons={true}
+        />
+
+        <FollowingModal
+          isOpen={showFollowingModal}
+          userId={profile.id}
+          onClose={() => setShowFollowingModal(false)}
+          onUserClick={(user) => {
+            setShowFollowingModal(false);
+            router.push(`/user/${user.id}`);
+          }}
+          showFollowButtons={true}
+        />
       </div>
     </div>
   );

@@ -11,6 +11,8 @@ interface ProfileHeaderProps {
   hasAvatar?: boolean;
   userId?: string;
   onEditProfile: () => void;
+  onFollowersClick?: () => void;
+  onFollowingClick?: () => void;
 }
 
 export function ProfileHeader({
@@ -24,6 +26,8 @@ export function ProfileHeader({
   hasAvatar = false,
   userId,
   onEditProfile,
+  onFollowersClick,
+  onFollowingClick,
 }: ProfileHeaderProps) {
   return (
     <div className="p-6 border-b border-gray-200 dark:border-gray-700 transition-colors duration-300">
@@ -85,22 +89,28 @@ export function ProfileHeader({
 
           {/* Stats */}
           <div className="flex space-x-6 mb-4">
-            <div className="text-center">
+            <button
+              onClick={onFollowersClick}
+              className="text-center hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded-md transition-colors cursor-pointer"
+            >
               <div className="text-xl font-bold text-gray-900 dark:text-white transition-colors duration-300">
                 {followersCount}
               </div>
               <div className="text-sm text-gray-600 dark:text-gray-400 transition-colors duration-300">
                 followers
               </div>
-            </div>
-            <div className="text-center">
+            </button>
+            <button
+              onClick={onFollowingClick}
+              className="text-center hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded-md transition-colors cursor-pointer"
+            >
               <div className="text-xl font-bold text-gray-900 dark:text-white transition-colors duration-300">
                 {followingCount}
               </div>
               <div className="text-sm text-gray-600 dark:text-gray-400 transition-colors duration-300">
                 following
               </div>
-            </div>
+            </button>
             <div className="text-center">
               <div className="text-xl font-bold text-gray-900 dark:text-white transition-colors duration-300">
                 {activitiesCount}
