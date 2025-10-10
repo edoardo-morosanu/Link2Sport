@@ -7,6 +7,11 @@ import Image from "next/image";
 import { AuthService } from "@/services/auth";
 import { AvatarService } from "@/services/avatar";
 import { AvatarUpload } from "@/components/ui/AvatarUpload";
+import { SportService, Sport } from "@/services/sport";
+import {
+  CityLocationPicker,
+  CityLocationData,
+} from "@/components/ui/CityLocationPicker";
 
 export default function RegisterPage() {
   const [step, setStep] = useState(1);
@@ -16,7 +21,9 @@ export default function RegisterPage() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [username, setUsername] = useState("");
-  const [location, setLocation] = useState("");
+  const [locationData, setLocationData] = useState<CityLocationData | null>(
+    null,
+  );
   const [sports, setSports] = useState<string[]>([]);
   const [sportInput, setSportInput] = useState("");
   const [showSportsDropdown, setShowSportsDropdown] = useState(false);
@@ -24,32 +31,10 @@ export default function RegisterPage() {
   const [bio, setBio] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [availableSports, setAvailableSports] = useState<Sport[]>([]);
+  const [loadingSports, setLoadingSports] = useState(true);
 
   const router = useRouter();
-
-  // Hardcoded sports list
-  const SPORTS_OPTIONS = [
-    "Football",
-    "Basketball",
-    "Tennis",
-    "Swimming",
-    "Running",
-    "Cycling",
-    "Volleyball",
-    "Baseball",
-    "Soccer",
-    "Golf",
-    "Boxing",
-    "Wrestling",
-    "Badminton",
-    "Table Tennis",
-    "Hockey",
-    "Rugby",
-    "Cricket",
-    "Skiing",
-    "Snowboarding",
-    "Surfing",
-  ];
 
   // Helper function to check if dark mode should be enabled
   const shouldEnableDarkMode = (
@@ -71,6 +56,29 @@ export default function RegisterPage() {
     if (shouldEnableDarkMode(savedTheme, prefersDark)) {
       document.documentElement.classList.add("dark");
     }
+
+    // Load sports from API
+    const loadSports = async () => {
+      try {
+        setLoadingSports(true);
+        const sportsData = await SportService.getAllSports();
+        setAvailableSports(sportsData);
+      } catch (error) {
+        console.error("Failed to load sports:", error);
+        // Fallback to a basic list if API fails
+        setAvailableSports([
+          { id: 1, name: "Football" },
+          { id: 2, name: "Basketball" },
+          { id: 3, name: "Tennis" },
+          { id: 4, name: "Swimming" },
+          { id: 5, name: "Running" },
+        ]);
+      } finally {
+        setLoadingSports(false);
+      }
+    };
+
+    loadSports();
   }, []);
 
   const validateEmail = () => {
@@ -98,7 +106,7 @@ export default function RegisterPage() {
       setError("Username is required");
       return false;
     }
-    if (!location) {
+    if (!locationData) {
       setError("Location is required");
       return false;
     }
@@ -215,7 +223,7 @@ export default function RegisterPage() {
       first_name: firstName,
       last_name: lastName,
       username: username,
-      location: location,
+      location: locationData?.displayName || "",
       sports: sports,
       bio: bio,
     };
@@ -335,15 +343,19 @@ export default function RegisterPage() {
   };
 
   const getFilteredSports = () => {
-    return SPORTS_OPTIONS.filter(
-      (sport) =>
-        sport.toLowerCase().includes(sportInput.toLowerCase()) &&
-        !sports.includes(sport),
-    );
+    return availableSports
+      .filter(
+        (sport) =>
+          sport.name.toLowerCase().includes(sportInput.toLowerCase()) &&
+          !sports.includes(sport.name),
+      )
+      .map((sport) => sport.name);
   };
 
   const getAvailableSports = () => {
-    return SPORTS_OPTIONS.filter((sport) => !sports.includes(sport));
+    return availableSports
+      .filter((sport) => !sports.includes(sport.name))
+      .map((sport) => sport.name);
   };
 
   return (
@@ -551,13 +563,17 @@ export default function RegisterPage() {
 
                   {/* Location Input */}
                   <div className="relative group">
-                    <input
-                      type="text"
-                      placeholder="Location (e.g., New York, NY)"
-                      value={location}
-                      onChange={(e) => setLocation(e.target.value)}
-                      required
-                      className="w-full px-4 py-4 bg-gray-50 dark:bg-gray-700/50 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 hover:border-gray-300 dark:hover:border-gray-500 group-hover:shadow-md"
+                    <CityLocationPicker
+                      value={locationData}
+                      onChange={setLocationData}
+                      placeholder="Search for your city..."
+                      mapTilerApiKey={process.env.NEXT_PUBLIC_MAPTILER_API_KEY}
+                      className="group-hover:shadow-md"
+                      disabled={isLoading}
+                      required={true}
+                      error={
+                        error && !locationData ? "Location is required" : ""
+                      }
                     />
                     <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
                   </div>
@@ -591,6 +607,9 @@ export default function RegisterPage() {
                     </h2>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
                       {firstName} {lastName} • {email}
+                      {locationData && (
+                        <span> • {locationData.displayName}</span>
+                      )}
                     </p>
                   </div>
 
@@ -634,9 +653,11 @@ export default function RegisterPage() {
                           <input
                             type="text"
                             placeholder={
-                              sports.length === 0
-                                ? "Type to add sports..."
-                                : "Add more..."
+                              loadingSports
+                                ? "Loading sports..."
+                                : sports.length === 0
+                                  ? "Type to add sports..."
+                                  : "Add more..."
                             }
                             value={sportInput}
                             onChange={(e) => setSportInput(e.target.value)}
@@ -649,7 +670,8 @@ export default function RegisterPage() {
                                 150,
                               );
                             }}
-                            className="flex-1 min-w-[150px] bg-transparent border-none outline-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                            disabled={loadingSports}
+                            className="flex-1 min-w-[150px] bg-transparent border-none outline-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 disabled:opacity-50"
                           />
                         </div>
                       </div>
@@ -675,6 +697,7 @@ export default function RegisterPage() {
                       {/* All Sports Dropdown */}
                       {showSportsDropdown &&
                         !sportInput &&
+                        !loadingSports &&
                         getAvailableSports().length > 0 && (
                           <div className="absolute z-20 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg max-h-60 overflow-y-auto">
                             <div className="px-4 py-2 bg-gray-50 dark:bg-gray-700/50 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-600">
@@ -694,6 +717,18 @@ export default function RegisterPage() {
                             </div>
                           </div>
                         )}
+
+                      {/* Loading Sports Dropdown */}
+                      {showSportsDropdown && !sportInput && loadingSports && (
+                        <div className="absolute z-20 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg p-4">
+                          <div className="flex items-center justify-center">
+                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                            <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">
+                              Loading sports...
+                            </span>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -760,6 +795,9 @@ export default function RegisterPage() {
                     </h2>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
                       {firstName} {lastName} • {email}
+                      {locationData && (
+                        <span> • {locationData.displayName}</span>
+                      )}
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
                       Add a profile picture and bio (both optional)

@@ -1,12 +1,17 @@
 package main
 
 import (
+	"backend/seeds"
 	"backend/src/config"
 	"backend/src/controllers"
 	"backend/src/models"
 	"backend/src/routes"
+	"backend/src/services"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	_ "backend/docs"
@@ -68,8 +73,13 @@ func main() {
 	defer config.CloseDatabase()
 
 	// Run database migrations
-	if err := config.AutoMigrate(&models.User{}, &models.Follow{}); err != nil {
+	if err := config.AutoMigrate(&models.User{}, &models.Follow{}, &models.Event{}, &models.EventParticipant{}, &models.Sport{}); err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
+	}
+
+	// Seed sports data
+	if err := seeds.SeedSports(); err != nil {
+		log.Printf("Warning: Failed to seed sports data: %v", err)
 	}
 
 	r := gin.Default()
@@ -99,6 +109,8 @@ func main() {
 	uploadController := controllers.NewUploadController()
 	searchController := controllers.NewSearchController()
 	followController := controllers.NewFollowController()
+	eventController := controllers.NewEventController()
+	sportController := controllers.NewSportController()
 
 	// Setup routes
 	routes.SetupAuthRoutes(r, authController)
@@ -106,6 +118,8 @@ func main() {
 	routes.SetupUploadRoutes(r, uploadController)
 	routes.SetupSearchRoutes(r, searchController)
 	routes.SetupFollowRoutes(r, followController)
+	routes.SetupEventRoutes(r, eventController)
+	routes.SetupSportRoutes(r, sportController)
 
 	// API v1 routes (existing routes)
 	v1 := r.Group("/api/v1")
@@ -113,5 +127,26 @@ func main() {
 		v1.GET("/", controllers.WelcomeHandler)
 	}
 
-	r.Run(":8080")
+	// Initialize and start the event status updater service
+	statusUpdater := services.NewEventStatusUpdater()
+	statusUpdater.Start()
+
+	// Setup graceful shutdown
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		log.Println("Server starting on :8080")
+		if err := r.Run(":8080"); err != nil {
+			log.Printf("Server failed to start: %v", err)
+		}
+	}()
+
+	// Wait for interrupt signal
+	<-quit
+	log.Println("Shutting down server...")
+
+	// Stop the event status updater service
+	statusUpdater.Stop()
+	log.Println("Server exited")
 }

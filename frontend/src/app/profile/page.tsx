@@ -11,6 +11,7 @@ import { ProfileTabs } from "@/components/profile/ProfileTabs";
 import { PostsTab } from "@/components/profile/PostsTab";
 import { ActivitiesTab } from "@/components/profile/ActivitiesTab";
 import { MediaTab } from "@/components/profile/MediaTab";
+import { AllTab } from "@/components/profile/AllTab";
 import { EditProfileModal } from "@/components/profile/EditProfileModal";
 import { FollowersModal, FollowingModal } from "@/components/Follow";
 
@@ -73,20 +74,20 @@ function ProfileContent({
   setIsEditModalOpen,
   setShowFollowersModal,
   setShowFollowingModal,
-  router,
 }: {
   profile: UserProfile;
-  activeTab: "posts" | "activities" | "media";
-  setActiveTab: (tab: "posts" | "activities" | "media") => void;
+  activeTab: "all" | "posts" | "activities" | "media";
+  setActiveTab: (tab: "all" | "posts" | "activities" | "media") => void;
   posts: ProfilePost[];
   activities: ProfileActivity[];
   setIsEditModalOpen: (open: boolean) => void;
   setShowFollowersModal: (open: boolean) => void;
   setShowFollowingModal: (open: boolean) => void;
-  router: any;
 }) {
   const renderTabContent = () => {
     switch (activeTab) {
+      case "all":
+        return <AllTab />;
       case "posts":
         return <PostsTab posts={posts} profileName={profile.name} />;
       case "activities":
@@ -135,9 +136,9 @@ export default function ProfilePage() {
   } = useProfile();
   const router = useRouter();
 
-  const [activeTab, setActiveTab] = useState<"posts" | "activities" | "media">(
-    "posts",
-  );
+  const [activeTab, setActiveTab] = useState<
+    "all" | "posts" | "activities" | "media"
+  >("all");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [showFollowersModal, setShowFollowersModal] = useState(false);
   const [showFollowingModal, setShowFollowingModal] = useState(false);
@@ -225,7 +226,6 @@ export default function ProfilePage() {
         setIsEditModalOpen={setIsEditModalOpen}
         setShowFollowersModal={setShowFollowersModal}
         setShowFollowingModal={setShowFollowingModal}
-        router={router}
       />
       <EditProfileModal
         isOpen={isEditModalOpen}
