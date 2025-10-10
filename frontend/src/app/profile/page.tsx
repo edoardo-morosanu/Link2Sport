@@ -226,7 +226,6 @@ export default function ProfilePage() {
         setIsEditModalOpen={setIsEditModalOpen}
         setShowFollowersModal={setShowFollowersModal}
         setShowFollowingModal={setShowFollowingModal}
-        router={router}
       />
       <EditProfileModal
         isOpen={isEditModalOpen}

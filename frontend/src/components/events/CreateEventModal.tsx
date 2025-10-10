@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { CreateEventData, EventType } from "@/types/event";
 import { MapTilerLocationPicker } from "@/components/ui/MapTilerLocationPicker";
 import { DateTimePicker } from "@/components/ui";
+import { SportService, Sport } from "@/services/sport";
 
 interface CreateEventModalProps {
   isOpen: boolean;
@@ -42,6 +43,11 @@ export function CreateEventModal({
   const [error, setError] = useState<string | null>(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const modalRef = useRef<HTMLDivElement>(null);
+  const [availableSports, setAvailableSports] = useState<Sport[]>([]);
+  const [loadingSports, setLoadingSports] = useState(true);
+  const [showSportsDropdown, setShowSportsDropdown] = useState(false);
+  const [sportSearchInput, setSportSearchInput] = useState("");
+  const [selectedSportIndex, setSelectedSportIndex] = useState(-1);
 
   // Mouse tracking for subtle hover effects
   useEffect(() => {
@@ -61,6 +67,33 @@ export function CreateEventModal({
     return () => {
       document.removeEventListener("mousemove", handleMouseMove);
     };
+  }, [isOpen]);
+
+  // Load sports from API when modal opens
+  useEffect(() => {
+    const loadSports = async () => {
+      if (!isOpen) return;
+
+      try {
+        setLoadingSports(true);
+        const sportsData = await SportService.getAllSports();
+        setAvailableSports(sportsData);
+      } catch (error) {
+        console.error("Failed to load sports:", error);
+        // Fallback to a basic list if API fails
+        setAvailableSports([
+          { id: 1, name: "Football" },
+          { id: 2, name: "Basketball" },
+          { id: 3, name: "Tennis" },
+          { id: 4, name: "Swimming" },
+          { id: 5, name: "Running" },
+        ]);
+      } finally {
+        setLoadingSports(false);
+      }
+    };
+
+    loadSports();
   }, [isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -252,20 +285,149 @@ export function CreateEventModal({
                   />
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-2 relative">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-300">
                     Sport *
                   </label>
-                  <input
-                    type="text"
-                    value={formData.sport}
-                    onChange={(e) =>
-                      setFormData({ ...formData, sport: e.target.value })
-                    }
-                    className="w-full px-4 py-3 bg-gray-50/70 dark:bg-gray-700/30 backdrop-blur-sm border-2 border-gray-200/50 dark:border-gray-600/30 text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:border-gray-300/60 dark:hover:border-gray-500/40 hover:bg-gray-50/90 dark:hover:bg-gray-700/40 placeholder-gray-500 dark:placeholder-gray-400"
-                    placeholder="e.g., Basketball"
-                    disabled={isSubmitting}
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={sportSearchInput}
+                      onChange={(e) => {
+                        setSportSearchInput(e.target.value);
+                        setSelectedSportIndex(-1);
+                      }}
+                      onKeyDown={(e) => {
+                        const filteredSports = availableSports
+                          .filter((sport) =>
+                            sport.name
+                              .toLowerCase()
+                              .includes(sportSearchInput.toLowerCase()),
+                          )
+                          .slice(0, 10);
+
+                        if (e.key === "ArrowDown") {
+                          e.preventDefault();
+                          setSelectedSportIndex((prev) =>
+                            prev < filteredSports.length - 1 ? prev + 1 : prev,
+                          );
+                        } else if (e.key === "ArrowUp") {
+                          e.preventDefault();
+                          setSelectedSportIndex((prev) =>
+                            prev > 0 ? prev - 1 : -1,
+                          );
+                        } else if (
+                          e.key === "Enter" &&
+                          selectedSportIndex >= 0
+                        ) {
+                          e.preventDefault();
+                          const selectedSport =
+                            filteredSports[selectedSportIndex];
+                          if (selectedSport) {
+                            setFormData({
+                              ...formData,
+                              sport: selectedSport.name,
+                            });
+                            setSportSearchInput("");
+                            setShowSportsDropdown(false);
+                            setSelectedSportIndex(-1);
+                          }
+                        } else if (e.key === "Escape") {
+                          setShowSportsDropdown(false);
+                          setSelectedSportIndex(-1);
+                        }
+                      }}
+                      onFocus={() => {
+                        setShowSportsDropdown(true);
+                        setSelectedSportIndex(-1);
+                      }}
+                      onBlur={() => {
+                        // Delay hiding to allow clicking on dropdown items
+                        setTimeout(() => {
+                          setShowSportsDropdown(false);
+                          setSelectedSportIndex(-1);
+                        }, 150);
+                      }}
+                      className="w-full px-4 py-3 bg-gray-50/70 dark:bg-gray-700/30 backdrop-blur-sm border-2 border-gray-200/50 dark:border-gray-600/30 text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:border-gray-300/60 dark:hover:border-gray-500/40 hover:bg-gray-50/90 dark:hover:bg-gray-700/40 placeholder-gray-500 dark:placeholder-gray-400"
+                      placeholder={
+                        loadingSports
+                          ? "Loading sports..."
+                          : formData.sport || "Search for a sport..."
+                      }
+                      disabled={isSubmitting || loadingSports}
+                    />
+
+                    {/* Selected Sport Display */}
+                    {formData.sport && !showSportsDropdown && (
+                      <div className="absolute inset-0 px-4 py-3 flex items-center justify-between pointer-events-none">
+                        <span className="text-gray-900 dark:text-white">
+                          {formData.sport}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormData({ ...formData, sport: "" });
+                            setSportSearchInput("");
+                          }}
+                          className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 pointer-events-auto"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Sports Dropdown */}
+                    {showSportsDropdown &&
+                      !loadingSports &&
+                      availableSports.length > 0 && (
+                        <div className="absolute z-30 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg max-h-40 overflow-y-auto">
+                          {availableSports
+                            .filter((sport) =>
+                              sport.name
+                                .toLowerCase()
+                                .includes(sportSearchInput.toLowerCase()),
+                            )
+                            .slice(0, 10)
+                            .map((sport, index) => (
+                              <button
+                                key={sport.id}
+                                type="button"
+                                onMouseDown={() => {
+                                  setFormData({
+                                    ...formData,
+                                    sport: sport.name,
+                                  });
+                                  setSportSearchInput("");
+                                  setShowSportsDropdown(false);
+                                  setSelectedSportIndex(-1);
+                                }}
+                                onMouseEnter={() =>
+                                  setSelectedSportIndex(index)
+                                }
+                                className={`w-full px-4 py-3 text-left transition-colors duration-200 first:rounded-t-xl last:rounded-b-xl ${
+                                  selectedSportIndex === index
+                                    ? "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
+                                    : "hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white"
+                                }`}
+                              >
+                                {sport.name}
+                              </button>
+                            ))}
+                        </div>
+                      )}
+
+                    {/* Loading Sports Dropdown */}
+                    {showSportsDropdown && loadingSports && (
+                      <div className="absolute z-30 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg p-4">
+                        <div className="flex items-center justify-center">
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500"></div>
+                          <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">
+                            Loading sports...
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -326,7 +488,6 @@ export function CreateEventModal({
                   placeholder="Search for a location or click on the map..."
                   disabled={isSubmitting}
                   apiKey={process.env.NEXT_PUBLIC_MAPTILER_API_KEY}
-                  country="nl"
                   showMap={true}
                   mapHeight="250px"
                   language="en"
