@@ -35,3 +35,9 @@ type ErrorResponse struct {
 	Error   string `json:"error" example:"Invalid credentials" description:"Error type or category"`
 	Message string `json:"message" example:"Email or password is incorrect" description:"Detailed error message"`
 }
+
+// SuccessResponse represents general success response structure
+// @Description General success response payload
+type SuccessResponse struct {
+	Message string `json:"message" example:"Operation completed successfully" description:"Success message"`
+}

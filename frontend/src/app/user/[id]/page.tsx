@@ -11,6 +11,7 @@ import { ProfileTabs } from "@/components/profile/ProfileTabs";
 import { PostsTab } from "@/components/profile/PostsTab";
 import { ActivitiesTab } from "@/components/profile/ActivitiesTab";
 import { MediaTab } from "@/components/profile/MediaTab";
+import { AllTab } from "@/components/profile/AllTab";
 import { ProfilePost, ProfileActivity } from "@/types/profile";
 import {
   FollowButton,
@@ -27,9 +28,9 @@ export default function UserProfilePage() {
   const [profile, setProfile] = useState<PublicUserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"posts" | "activities" | "media">(
-    "posts",
-  );
+  const [activeTab, setActiveTab] = useState<
+    "all" | "posts" | "activities" | "media"
+  >("all");
   const [posts, setPosts] = useState<ProfilePost[]>([]);
   const [activities, setActivities] = useState<ProfileActivity[]>([]);
   const [showFollowersModal, setShowFollowersModal] = useState(false);
@@ -124,11 +125,16 @@ export default function UserProfilePage() {
   };
 
   const renderTabContent = () => {
-    if (!profile) return null;
-
     switch (activeTab) {
+      case "all":
+        return <AllTab />;
       case "posts":
-        return <PostsTab posts={posts} profileName={profile.display_name} />;
+        return (
+          <PostsTab
+            posts={posts}
+            profileName={profile?.display_name || profile?.username || ""}
+          />
+        );
       case "activities":
         return <ActivitiesTab activities={activities} />;
       case "media":

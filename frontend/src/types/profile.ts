@@ -1,3 +1,6 @@
+// Import Event types for better integration
+import { Event, EventType } from "./event";
+
 export interface UserProfile {
   id: string;
   username: string;
@@ -24,6 +27,7 @@ export interface ProfilePost {
   comments?: number;
 }
 
+// Keep ProfileActivity for backward compatibility, but now extends Event structure
 export interface ProfileActivity {
   id: string;
   userId: string;
@@ -34,4 +38,19 @@ export interface ProfileActivity {
   date: Date;
   location: string;
   participants?: number;
+}
+
+// Helper function to convert Event to ProfileActivity for legacy compatibility
+export function eventToProfileActivity(event: Event): ProfileActivity {
+  return {
+    id: event.id,
+    userId: event.organizer_id,
+    type: event.type,
+    sport: event.sport,
+    title: event.title,
+    description: event.description,
+    date: event.start_at,
+    location: event.location_name,
+    participants: event.participants,
+  };
 }
