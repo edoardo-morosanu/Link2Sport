@@ -225,6 +225,8 @@ function mergeFeed(posts: Post[], events: Event[]) {
 function PostCard({ post }: { post: Post }) {
   const router = useRouter();
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [likes, setLikes] = useState<number>(post.likes_count ?? 0);
+  const [liked, setLiked] = useState<boolean>(!!post.liked_by_me);
   const goToMention = async (username: string) => {
     try {
       const res = await SearchService.searchUsers({ q: username, limit: 1, offset: 0 });
@@ -261,6 +263,38 @@ function PostCard({ post }: { post: Post }) {
           onClick={(e) => { e.stopPropagation(); setPreviewUrl(post.image_url!); }}
         />
       )}
+      <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-300">
+        <button
+          type="button"
+          className={`inline-flex items-center gap-1 px-2 py-1 rounded-md border ${liked ? "border-rose-300 text-rose-600 bg-rose-50 dark:bg-rose-900/20" : "border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"}`}
+          onClick={async (e) => {
+            e.stopPropagation();
+            const prevLiked = liked;
+            const prevLikes = likes;
+            setLiked(!prevLiked);
+            setLikes(prevLiked ? Math.max(0, prevLikes - 1) : prevLikes + 1);
+            try {
+              const res = await PostService.toggleLike(post.id);
+              setLiked(res.liked_by_me);
+              setLikes(res.likes_count);
+            } catch {
+              setLiked(prevLiked);
+              setLikes(prevLikes);
+            }
+          }}
+        >
+          <svg
+            className={`w-4 h-4 ${liked ? "fill-current" : ""}`}
+            viewBox="0 0 24 24"
+            fill={liked ? "currentColor" : "none"}
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 21.364 4.318 12.682a4.5 4.5 0 010-6.364z" />
+          </svg>
+          <span>{likes}</span>
+        </button>
+      </div>
+
       {previewUrl && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40"

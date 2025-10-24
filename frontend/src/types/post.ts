@@ -6,6 +6,8 @@ export interface Post {
   status: "published" | "archived" | "deleted";
   image_url?: string;
   mentions?: string[];
+  likes_count?: number;
+  liked_by_me?: boolean;
   created_at: Date;
   updated_at: Date;
 }

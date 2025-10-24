@@ -7,6 +7,14 @@ import type { EventWithOrganizer } from "@/types/event";
 import { EditEventModal } from "@/components/events/EditEventModal";
 import type { UpdateEventData } from "@/types/event";
 import type { EventParticipant } from "@/types/event";
+import {
+  CalendarIcon,
+  ClockIcon,
+  MapPinIcon,
+  UsersIcon,
+  XMarkIcon,
+  TrophyIcon,
+} from "@heroicons/react/24/outline";
 
 export default function ActivityDetailPage() {
   const params = useParams();
@@ -160,13 +168,15 @@ export default function ActivityDetailPage() {
                         onError={(e) => {
                           const target = e.currentTarget as HTMLImageElement;
                           target.onerror = null;
-                          target.src =
-                            'data:image/svg+xml;utf8,' +
-                            encodeURIComponent(`<?xml version=\"1.0\" encoding=\"UTF-8\"?><svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 64 64\"><circle cx=\"32\" cy=\"32\" r=\"32\" fill=\"%23e5e7eb\"/><path d=\"M32 34c6.627 0 12-5.373 12-12S38.627 10 32 10 20 15.373 20 22s5.373 12 12 12zm0 4c-8.837 0-16 5.82-16 13v1h32v-1c0-7.18-7.163-13-16-13z\" fill=\"%239ca3af\"/></svg>`);
+                          target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(event.organizer_username || event.organizer_name || "User")}&size=200&background=10b981&color=fff`;
                         }}
                       />
                     ) : (
-                      <svg className="w-5 h-5 text-emerald-600 dark:text-emerald-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                      <img
+                        src={`https://ui-avatars.com/api/?name=${encodeURIComponent(event.organizer_username || event.organizer_name || "User")}&size=200&background=10b981&color=fff`}
+                        alt="avatar"
+                        className="w-full h-full object-cover"
+                      />
                     )}
                   </div>
                   <div>
@@ -202,12 +212,12 @@ export default function ActivityDetailPage() {
               )}
 
               <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-gray-700 dark:text-gray-300">
-                <div className="flex items-center gap-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3a2 2 0 012-2h4a2 2 0 012 2v4m-6 0V6a2 2 0 012-2h4a2 2 0 012 2v1m-6 0a2 2 0 002 2h4a2 2 0 002-2m-6 0h6a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V9a2 2 0 012-2z"/></svg><span>{formatDate(event.start_at)}</span></div>
-                {event.end_at && (<div className="flex items-center gap-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><span>{formatDate(event.end_at)}</span></div>)}
-                <div className="flex items-center gap-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2v6a2 2 0 01-2 2H9a2 2 0 01-2-2V9a2 2 0 012-2h6z"/></svg><span>{event.sport}</span></div>
-                {event.location_name && (<div className="flex items-center gap-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg><span>{event.location_name}</span></div>)}
+                <div className="flex items-center gap-2"><CalendarIcon className="w-5 h-5 flex-none" strokeWidth={2} /><span>{formatDate(event.start_at)}</span></div>
+                {event.end_at && (<div className="flex items-center gap-2"><ClockIcon className="w-5 h-5 flex-none" strokeWidth={2} /><span>{formatDate(event.end_at)}</span></div>)}
+                <div className="flex items-center gap-2"><TrophyIcon className="w-5 h-5 flex-none" strokeWidth={2} /><span>{event.sport}</span></div>
+                {event.location_name && (<div className="flex items-center gap-2"><MapPinIcon className="w-5 h-5 flex-none" strokeWidth={2} /><span>{event.location_name}</span></div>)}
                 <button type="button" onClick={openParticipants} className="flex items-center gap-2 text-left hover:underline focus:outline-none">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0"/></svg>
+                  <UsersIcon className="w-5 h-5 flex-none" strokeWidth={2} />
                   <span>{event.participants}{event.capacity ? `/${event.capacity}` : ""} participants</span>
                 </button>
               </div>
@@ -268,7 +278,7 @@ export default function ActivityDetailPage() {
             <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Participants</h3>
               <button className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700" onClick={() => setIsParticipantsOpen(false)} aria-label="Close">
-                <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+                <XMarkIcon className="w-5 h-5 text-gray-600 dark:text-gray-300" />
               </button>
             </div>
             <div className="max-h-[60vh] overflow-y-auto">

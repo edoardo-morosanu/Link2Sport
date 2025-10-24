@@ -92,13 +92,19 @@ export class EventService {
   }
 
   private static mapEventWithOrganizerResponse(event: any): EventWithOrganizer {
+    const rawOrgAvatar: string | undefined =
+      event.organizer_avatar || event.organizer_avatar_url || event.avatar_url;
+    const organizer_avatar = rawOrgAvatar
+      ? (rawOrgAvatar.startsWith("http") || rawOrgAvatar.startsWith("data:")
+          ? rawOrgAvatar
+          : `${API_BASE_URL}${rawOrgAvatar}`)
+      : undefined;
+
     return {
       ...this.mapEventResponse(event),
       organizer_name: event.organizer_name || "",
       organizer_username: event.organizer_username || "",
-      organizer_avatar: event.organizer_avatar
-        ? `${API_BASE_URL}${event.organizer_avatar}`
-        : undefined,
+      organizer_avatar,
       is_organizer: event.is_organizer || false,
       is_participant: event.is_participant || false,
     };
@@ -254,7 +260,13 @@ export class EventService {
       const username = participant.username || user.username || "";
       const displayName =
         participant.name || user.display_name || user.username || username || "";
-      const avatarPath = participant.avatar_url || user.avatar_url;
+      const avatarPath: string | undefined =
+        participant.avatar || participant.avatar_url || user.avatar_url;
+      const avatar = avatarPath
+        ? (avatarPath.startsWith("http") || avatarPath.startsWith("data:")
+            ? avatarPath
+            : `${API_BASE_URL}${avatarPath}`)
+        : undefined;
       return {
         id: participant.id?.toString() || "",
         event_id: participant.event_id?.toString() || "",
@@ -263,7 +275,7 @@ export class EventService {
         joined_at: new Date(participant.joined_at),
         username,
         name: displayName,
-        avatar: avatarPath ? `${API_BASE_URL}${avatarPath}` : undefined,
+        avatar,
       } as EventParticipant;
     });
   }

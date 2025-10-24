@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { SearchModal } from "@/components/search/SearchModal";
+import { HomeIcon, CalendarIcon, MagnifyingGlassIcon, BellIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { usePathname, useRouter } from "next/navigation";
 import { AuthService } from "@/services/auth";
 import { useAuth } from "@/contexts/AuthContext";
@@ -67,14 +68,14 @@ export function AppHeader() {
                 className={`p-2 rounded-lg ${pathname === "/" ? "bg-gray-200 dark:bg-gray-700 text-blue-600 dark:text-blue-300" : "text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"}`}
                 aria-label="Feed"
               >
-                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7m-9 2v8m-4-4h8"/></svg>
+                <HomeIcon className="w-5 h-5" />
               </button>
               <button
                 onClick={() => router.push("/activities")}
                 className={`p-2 rounded-lg ${pathname?.startsWith("/activities") ? "bg-gray-200 dark:bg-gray-700 text-blue-600 dark:text-blue-300" : "text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"}`}
                 aria-label="Activities"
               >
-                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3h8v4M5 11h14M5 19h14M7 11v8m10-8v8"/></svg>
+                <CalendarIcon className="w-5 h-5" />
               </button>
             </div>
             <nav className="hidden sm:flex items-center gap-2 rounded-xl p-1 bg-gray-100 dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600">
@@ -83,14 +84,14 @@ export function AppHeader() {
                 className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${pathname === "/" ? "bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-300 shadow" : "text-gray-700 dark:text-gray-200 hover:bg-white/70 dark:hover:bg-gray-800/60"}`}
                 aria-current={pathname === "/" ? "page" : undefined}
               >
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7m-9 2v8m-4-4h8"/></svg>
+                <HomeIcon className="w-5 h-5" />
                 <span>Feed</span>
               </button>
               <button
                 onClick={() => router.push("/activities")}
                 className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${pathname?.startsWith("/activities") ? "bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-300 shadow" : "text-gray-700 dark:text-gray-200 hover:bg-white/70 dark:hover:bg-gray-800/60"}`}
               >
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3h8v4M5 11h14M5 19h14M7 11v8m10-8v8"/></svg>
+                <CalendarIcon className="w-5 h-5" />
                 <span>Activities</span>
               </button>
             </nav>
@@ -99,19 +100,7 @@ export function AppHeader() {
                 onClick={() => setIsSearchOpen(true)}
                 className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors duration-200"
               >
-                <svg
-                  className="w-5 h-5 text-gray-600 dark:text-gray-300"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                  />
-                </svg>
+                <MagnifyingGlassIcon className="w-5 h-5 text-gray-600 dark:text-gray-300" />
               </button>
               <button
                 onClick={() => setIsNotifOpen(true)}
@@ -119,7 +108,7 @@ export function AppHeader() {
                 title="Notifications"
                 aria-label="Notifications"
               >
-                <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2c0 .5-.2 1-.6 1.4L4 17h5m6 0v1a3 3 0 11-6 0v-1"/></svg>
+                <BellIcon className="w-5 h-5 text-gray-600 dark:text-gray-300" />
               </button>
               <div className="relative" ref={menuRef}>
                 <button
@@ -180,7 +169,7 @@ export function AppHeader() {
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Notifications</h3>
               <button onClick={() => setIsNotifOpen(false)} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="Close">
-                <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                <XMarkIcon className="w-5 h-5 text-gray-600 dark:text-gray-300" />
               </button>
             </div>
             <div className="flex-1 overflow-y-auto">

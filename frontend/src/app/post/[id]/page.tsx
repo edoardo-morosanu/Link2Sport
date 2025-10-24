@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { PostService } from "@/services/post";
+import { AvatarService } from "@/services/avatar";
 import type { Post } from "@/types/post";
 import { AuthService } from "@/services/auth";
 import type { UpdatePostData } from "@/types/post";
@@ -20,6 +21,8 @@ export default function PostDetailPage() {
   const [editBody, setEditBody] = useState("");
   const isOwner = post && AuthService.getUserId() === post.user_id;
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [likes, setLikes] = useState<number>(0);
+  const [liked, setLiked] = useState<boolean>(false);
 
   useEffect(() => {
     async function fetchPost() {
@@ -28,6 +31,8 @@ export default function PostDetailPage() {
         setLoading(true);
         const p = await PostService.getPost(postId);
         setPost(p);
+        setLikes(p.likes_count ?? 0);
+        setLiked(!!p.liked_by_me);
         setEditTitle(p.title || "");
         setEditBody(p.body || "");
       } catch (err) {
@@ -100,13 +105,49 @@ export default function PostDetailPage() {
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 mb-4">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
-                <svg className="w-4 h-4 text-blue-600 dark:text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h6m-1 8l-4-4H6a2 2 0 01-2-2V6a2 2 0 012-2h12a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
-                </svg>
+              <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-700">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={AvatarService.getAvatarUrl(post.user_id)}
+                  alt="author avatar"
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    const target = e.currentTarget as HTMLImageElement;
+                    target.onerror = null;
+                    target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent("User")}&size=200&background=3b82f6&color=fff`;
+                  }}
+                />
               </div>
               <span className="text-sm text-gray-500 dark:text-gray-400">{new Date(post.created_at).toLocaleString()}</span>
             </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={async () => {
+                  const prevLiked = liked;
+                  const prevLikes = likes;
+                  setLiked(!prevLiked);
+                  setLikes(prevLiked ? Math.max(0, prevLikes - 1) : prevLikes + 1);
+                  try {
+                    const res = await PostService.toggleLike(postId);
+                    setLiked(res.liked_by_me);
+                    setLikes(res.likes_count);
+                  } catch {
+                    setLiked(prevLiked);
+                    setLikes(prevLikes);
+                  }
+                }}
+                className={`inline-flex items-center gap-1 px-2 py-1 rounded-md border ${liked ? "border-rose-300 text-rose-600 bg-rose-50 dark:bg-rose-900/20" : "border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"}`}
+              >
+                <svg
+                  className={`w-4 h-4 ${liked ? "fill-current" : ""}`}
+                  viewBox="0 0 24 24"
+                  fill={liked ? "currentColor" : "none"}
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 21.364 4.318 12.682a4.5 4.5 0 010-6.364z" />
+                </svg>
+                <span>{likes}</span>
+              </button>
             {isOwner && (
               <div className="flex items-center gap-2">
                 <button
@@ -123,6 +164,7 @@ export default function PostDetailPage() {
                 </button>
               </div>
             )}
+            </div>
           </div>
           {post.title && (
             <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-1">{post.title}</h1>

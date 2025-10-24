@@ -55,6 +55,8 @@ export class PostService {
       status: data.status,
       image_url: data.image_url ? `${API_BASE_URL}${data.image_url}` : undefined,
       mentions: data.mentions || [],
+      likes_count: typeof data.likes_count === "number" ? data.likes_count : 0,
+      liked_by_me: !!data.liked_by_me,
       created_at: new Date(data.created_at),
       updated_at: new Date(data.updated_at),
     };
@@ -130,5 +132,15 @@ export class PostService {
     await this.makeRequest(`${API_BASE_URL}/api/posts/${postId}`, {
       method: "DELETE",
     });
+  }
+
+  static async toggleLike(postId: string): Promise<{ likes_count: number; liked_by_me: boolean }> {
+    const res = await this.makeRequest(`${API_BASE_URL}/api/posts/${postId}/like`, {
+      method: "POST",
+    });
+    return {
+      likes_count: typeof res.likes_count === "number" ? res.likes_count : 0,
+      liked_by_me: !!res.liked_by_me,
+    };
   }
 }

@@ -74,7 +74,7 @@ func main() {
 	defer config.CloseDatabase()
 
 	// Run database migrations
-	if err := config.AutoMigrate(&models.User{}, &models.Follow{}, &models.Event{}, &models.EventParticipant{}, &models.Sport{}, &models.Post{}, &models.PostMention{}); err != nil {
+	if err := config.AutoMigrate(&models.User{}, &models.Follow{}, &models.Event{}, &models.EventParticipant{}, &models.Sport{}, &models.Post{}, &models.PostMention{}, &models.PostLike{}); err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}
 

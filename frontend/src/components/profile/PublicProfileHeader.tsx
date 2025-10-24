@@ -23,38 +23,25 @@ function ProfileAvatar({
   return (
     <div className="flex-shrink-0">
       <div className="w-24 h-24 rounded-full overflow-hidden bg-gradient-to-br from-blue-400 to-purple-500 mx-auto sm:mx-0 flex items-center justify-center">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         {hasAvatar ? (
-          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={AvatarService.getAvatarUrl(userId)}
             alt={`${displayName}'s avatar`}
             className="w-full h-full object-cover"
             onError={(e) => {
-              // Fallback to default avatar on error
-              const target = e.currentTarget;
-              target.style.display = "none";
-              if (target.nextSibling) {
-                (target.nextSibling as HTMLElement).style.display = "flex";
-              }
+              const target = e.currentTarget as HTMLImageElement;
+              target.onerror = null;
+              target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName || "User")}&size=200&background=3b82f6&color=fff`;
             }}
           />
-        ) : null}
-        <div
-          className={`w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-400 to-purple-500 ${hasAvatar ? "hidden" : ""}`}
-          style={{ display: hasAvatar ? "none" : "flex" }}
-        >
-          <svg
-            className="w-12 h-12 text-white"
-            fill="currentColor"
-            viewBox="0 0 20 20"
-          >
-            <path
-              fillRule="evenodd"
-              d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
-              clipRule="evenodd"
-            />
-          </svg>
-        </div>
+        ) : (
+          <img
+            src={`https://ui-avatars.com/api/?name=${encodeURIComponent(displayName || "User")}&size=200&background=3b82f6&color=fff`}
+            alt={`${displayName}'s avatar`}
+            className="w-full h-full object-cover"
+          />
+        )}
       </div>
     </div>
   );

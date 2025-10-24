@@ -28,6 +28,8 @@ type PostResponse struct {
 	Status    PostStatus `json:"status" example:"archived" description:"Status of the post"`
 	ImageURL  *string    `json:"image_url,omitempty" description:"URL to the post image if available"`
 	Mentions  []string   `json:"mentions,omitempty" description:"Usernames mentioned in the post"`
+	LikesCount int       `json:"likes_count" description:"Total number of likes on the post"`
+	LikedByMe  bool      `json:"liked_by_me" description:"Whether the requesting user liked this post"`
 	CreatedAt time.Time  `json:"created_at" example:"2024-01-15T10:30:00Z" description:"Creation timestamp"`
 	UpdatedAt time.Time  `json:"updated_at" example:"2024-01-15T10:30:00Z" description:"Last update timestamp"`
 }

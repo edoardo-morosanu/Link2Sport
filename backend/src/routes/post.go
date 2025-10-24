@@ -37,6 +37,9 @@ func SetupPostRoutes(router *gin.Engine, postController *controllers.PostControl
 		// Upload post image
 		postGroup.POST("/:id/image", postController.UploadPostImage)
 
+		// Toggle like on a post
+		postGroup.POST("/:id/like", postController.ToggleLike)
+
 		// Temporary: Ping route to verify posts group reachability
 		postGroup.GET("/ping", func(c *gin.Context) { c.Status(200) })
 	}

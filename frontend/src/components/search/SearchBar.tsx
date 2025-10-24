@@ -214,40 +214,19 @@ export function SearchBar({ onClose }: SearchBarProps) {
                     {/* Avatar */}
                     <div className="relative">
                       <div className="w-12 h-12 rounded-full overflow-hidden ring-2 ring-gray-200 dark:ring-gray-700 group-hover:ring-blue-300 dark:group-hover:ring-blue-600 transition-all duration-200">
-                        {user.has_avatar ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={AvatarService.getAvatarUrl(user.id)}
-                            alt={`${user.display_name}'s avatar`}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              // Fallback to default avatar on error
-                              const target = e.currentTarget;
-                              target.style.display = "none";
-                              if (target.nextSibling) {
-                                (
-                                  target.nextSibling as HTMLElement
-                                ).style.display = "flex";
-                              }
-                            }}
-                          />
-                        ) : null}
-                        <div
-                          className={`w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-400 to-purple-500 ${user.has_avatar ? "hidden" : ""}`}
-                          style={{ display: user.has_avatar ? "none" : "flex" }}
-                        >
-                          <svg
-                            className="w-6 h-6 text-white"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                          >
-                            <path
-                              fillRule="evenodd"
-                              d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
-                        </div>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={user.has_avatar
+                            ? AvatarService.getAvatarUrl(user.id)
+                            : `https://ui-avatars.com/api/?name=${encodeURIComponent(user.display_name || user.username || "User")}&size=200&background=3b82f6&color=fff`}
+                          alt={`${user.display_name}'s avatar`}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            const target = e.currentTarget as HTMLImageElement;
+                            target.onerror = null;
+                            target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.display_name || user.username || "User")}&size=200&background=3b82f6&color=fff`;
+                          }}
+                        />
                       </div>
                     </div>
 
