@@ -5,6 +5,7 @@ type PostStatus string
 const (
 	PostStatusPublished PostStatus = "published"
 	PostStatusArchived  PostStatus = "archived"
+	PostStatusDeleted   PostStatus = "deleted"
 )
 
 type NotificationType string

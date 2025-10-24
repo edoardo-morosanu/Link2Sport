@@ -1,13 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { EventList } from "@/components/events/EventList";
-import { CreateEventModal } from "@/components/events/CreateEventModal";
 import { AppHeader } from "@/components/profile/AppHeader";
-import { EventService } from "@/services/event";
-import { CreateEventData } from "@/types/event";
+import { AllTab } from "@/components/profile/AllTab";
 
 // Loading state component
 function HomeLoadingState() {
@@ -148,8 +145,6 @@ function QuickStats() {
 export default function HomePage() {
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [isCreating, setIsCreating] = useState(false);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -157,21 +152,6 @@ export default function HomePage() {
       router.push("/login");
     }
   }, [user, authLoading, router]);
-
-  // Handle event creation
-  const handleCreateEvent = async (eventData: CreateEventData) => {
-    try {
-      setIsCreating(true);
-      await EventService.createEvent(eventData);
-      setShowCreateModal(false);
-      // The EventList will automatically refresh through its hook
-    } catch (error) {
-      console.error("Error creating event:", error);
-      throw error;
-    } finally {
-      setIsCreating(false);
-    }
-  };
 
   // Show loading while checking authentication
   if (authLoading) {
@@ -186,60 +166,9 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
       <AppHeader />
-
-      {/* Hero Section */}
-      <HeroSection onCreateEvent={() => setShowCreateModal(true)} />
-
-      <div className="max-w-6xl mx-auto px-4 pb-12">
-        {/* Quick Stats */}
-        <QuickStats />
-
-        {/* Main Content */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 transition-colors duration-300">
-          <div className="border-b border-gray-200 dark:border-gray-700 px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                  Upcoming Activities
-                </h2>
-                <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
-                  Discover and join sports activities in your area
-                </p>
-              </div>
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2"
-              >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                  />
-                </svg>
-                <span>Create Activity</span>
-              </button>
-            </div>
-          </div>
-
-          <div className="p-6">
-            <EventList showFilters={true} showJoinActions={true} />
-          </div>
-        </div>
+      <div className="max-w-4xl mx-auto px-4 py-6">
+        <AllTab showCreateSection={true} />
       </div>
-
-      {/* Create Event Modal */}
-      <CreateEventModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        onSave={handleCreateEvent}
-      />
     </div>
   );
 }

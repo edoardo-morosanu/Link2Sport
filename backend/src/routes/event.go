@@ -21,6 +21,9 @@ func SetupEventRoutes(router *gin.Engine, eventController *controllers.EventCont
 		// Get user's own events
 		eventGroup.GET("/my", eventController.GetUserEvents)
 
+		// Get another user's events by organizer ID
+		eventGroup.GET("/user/:id", eventController.GetUserEventsByID)
+
 		// Get specific event
 		eventGroup.GET("/:id", eventController.GetEvent)
 

@@ -61,6 +61,10 @@ func (pc *ProfileController) GetProfile(c *gin.Context) {
 	config.DB.Model(&models.Follow{}).Where("followed_id = ?", user.ID).Count(&followersCount)
 	config.DB.Model(&models.Follow{}).Where("follower_id = ?", user.ID).Count(&followingCount)
 
+	// Get activities (events) count for this user (exclude cancelled)
+	var activitiesCount int64
+	config.DB.Model(&models.Event{}).Where("organizer_id = ? AND deleted_at IS NULL AND status != ?", user.ID, "cancelled").Count(&activitiesCount)
+
 	profile := types.ProfileResponse{
 		ID:             user.ID,
 		Username:       user.Username,
@@ -74,6 +78,7 @@ func (pc *ProfileController) GetProfile(c *gin.Context) {
 		HasAvatar:      hasAvatar,
 		FollowersCount: int(followersCount),
 		FollowingCount: int(followingCount),
+		ActivitiesCount: int(activitiesCount),
 		CreatedAt:      user.CreatedAt,
 		UpdatedAt:      user.UpdatedAt,
 	}
@@ -153,6 +158,10 @@ func (pc *ProfileController) GetPublicProfile(c *gin.Context) {
 	config.DB.Model(&models.Follow{}).Where("followed_id = ?", targetUserID).Count(&followersCount)
 	config.DB.Model(&models.Follow{}).Where("follower_id = ?", targetUserID).Count(&followingCount)
 
+	// Get activities (events) count for target user (exclude cancelled)
+	var activitiesCount int64
+	config.DB.Model(&models.Event{}).Where("organizer_id = ? AND deleted_at IS NULL AND status != ?", targetUserID, "cancelled").Count(&activitiesCount)
+
 	profile := types.PublicProfileResponse{
 		ID:             user.ID,
 		Username:       user.Username,
@@ -165,6 +174,7 @@ func (pc *ProfileController) GetPublicProfile(c *gin.Context) {
 		HasAvatar:      hasAvatar,
 		FollowersCount: int(followersCount),
 		FollowingCount: int(followingCount),
+		ActivitiesCount: int(activitiesCount),
 		CreatedAt:      user.CreatedAt,
 		UpdatedAt:      user.UpdatedAt,
 		IsFollowing:    isFollowing,

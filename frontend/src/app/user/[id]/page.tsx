@@ -5,6 +5,9 @@ import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { SearchService } from "@/services/search";
 import { PublicUserProfile } from "@/types/search";
+import { Event } from "@/types/event";
+import { EventService } from "@/services/event";
+import { eventToProfileActivity } from "@/types/profile";
 import { AppHeader } from "@/components/profile/AppHeader";
 import PublicProfileHeader from "@/components/profile/PublicProfileHeader";
 import { ProfileTabs } from "@/components/profile/ProfileTabs";
@@ -18,6 +21,7 @@ import {
   FollowersModal,
   FollowingModal,
 } from "@/components/Follow";
+import { useUserPosts as useUserPostsHook } from "@/hooks/usePosts";
 
 export default function UserProfilePage() {
   const { user, isLoading: authLoading } = useAuth();
@@ -33,8 +37,12 @@ export default function UserProfilePage() {
   >("all");
   const [posts, setPosts] = useState<ProfilePost[]>([]);
   const [activities, setActivities] = useState<ProfileActivity[]>([]);
+  const [userEvents, setUserEvents] = useState<Event[]>([]);
   const [showFollowersModal, setShowFollowersModal] = useState(false);
   const [showFollowingModal, setShowFollowingModal] = useState(false);
+
+  // Backend posts for this user
+  const { posts: userPosts, loading: postsLoading, error: postsError, refreshPosts } = useUserPostsHook(userId);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -73,43 +81,43 @@ export default function UserProfilePage() {
     fetchProfile();
   }, [userId, user]);
 
-  // Load mock data for posts and activities (replace with actual API calls later)
+  // Map backend posts to ProfilePost
   useEffect(() => {
-    if (profile) {
-      setPosts([
-        {
-          id: "1",
-          userId: profile.id.toString(),
-          content: `Had an amazing ${profile.sports[0] || "sports"} session today! Great community here.`,
-          timestamp: new Date("2024-10-04"),
-          likes: 12,
-          comments: 2,
-        },
-        {
-          id: "2",
-          userId: profile.id.toString(),
-          content: "Looking forward to the next game! Who's in?",
-          timestamp: new Date("2024-10-02"),
-          likes: 8,
-          comments: 5,
-        },
-      ]);
-
-      setActivities([
-        {
-          id: "1",
-          userId: profile.id.toString(),
-          type: "game",
-          sport: profile.sports[0] || "Basketball",
-          title: `${profile.sports[0] || "Basketball"} Game`,
-          description: `Friendly ${profile.sports[0] || "basketball"} match`,
-          date: new Date("2024-10-06"),
-          location: profile.city || "Local Court",
-          participants: 6,
-        },
-      ]);
+    if (userPosts && profile) {
+      const mapped = userPosts.map((p) => ({
+        id: p.id,
+        userId: p.user_id,
+        title: p.title,
+        content: p.body,
+        timestamp: p.created_at,
+        images: p.image_url ? [p.image_url] : undefined,
+        likes: 0,
+        comments: 0,
+        mentions: p.mentions || [],
+      }))
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      setPosts(mapped);
     }
-  }, [profile]);
+  }, [userPosts, profile]);
+
+  // Fetch target user's events and map to activities
+  useEffect(() => {
+    async function fetchUserEvents() {
+      if (!userId || !user) return;
+      try {
+        const evts = await EventService.getUserEventsById(userId);
+        setUserEvents(evts);
+        // Map events to ProfileActivity for ActivitiesTab
+        const mapped = evts.map(eventToProfileActivity);
+        setActivities(mapped);
+      } catch (err) {
+        console.error("Failed to fetch user events:", err);
+        setUserEvents([]);
+        setActivities([]);
+      }
+    }
+    fetchUserEvents();
+  }, [userId, user]);
 
   const handleFollowChange = (isFollowing: boolean) => {
     // Update the profile's follow status and counts
@@ -127,7 +135,13 @@ export default function UserProfilePage() {
   const renderTabContent = () => {
     switch (activeTab) {
       case "all":
-        return <AllTab />;
+        return (
+          <AllTab
+            posts={userPosts}
+            events={userEvents}
+            showCreateSection={false}
+          />
+        );
       case "posts":
         return (
           <PostsTab
@@ -138,7 +152,7 @@ export default function UserProfilePage() {
       case "activities":
         return <ActivitiesTab activities={activities} />;
       case "media":
-        return <MediaTab />;
+        return <MediaTab posts={posts} />;
       default:
         return null;
     }
@@ -216,19 +230,18 @@ export default function UserProfilePage() {
             <div className="flex items-start justify-between">
               <div className="flex items-center space-x-4">
                 <div className="relative">
-                  {profile.has_avatar ? (
-                    <img
-                      src={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"}${profile.avatar_url}`}
-                      alt={`${profile.display_name}'s avatar`}
-                      className="w-24 h-24 rounded-full object-cover border-4 border-white dark:border-gray-700 shadow-lg"
-                    />
-                  ) : (
-                    <div className="w-24 h-24 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg">
-                      {profile.display_name?.charAt(0)?.toUpperCase() ||
-                        profile.username?.charAt(0)?.toUpperCase() ||
-                        "?"}
-                    </div>
-                  )}
+                  <img
+                    src={profile.has_avatar && profile.avatar_url
+                      ? `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"}${profile.avatar_url}`
+                      : `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.username || profile.display_name || "User")}&size=200&background=3b82f6&color=fff`}
+                    alt={`${profile.display_name}'s avatar`}
+                    className="w-24 h-24 rounded-full object-cover border-4 border-white dark:border-gray-700 shadow-lg"
+                    onError={(e) => {
+                      const target = e.currentTarget as HTMLImageElement;
+                      target.onerror = null;
+                      target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.username || profile.display_name || "User")}&size=200&background=3b82f6&color=fff`;
+                    }}
+                  />
                 </div>
 
                 <div className="space-y-2">

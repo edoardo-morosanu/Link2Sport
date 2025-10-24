@@ -32,4 +32,6 @@ export interface PublicUserProfile {
   created_at: string;
   updated_at: string;
   is_following?: boolean; // Will be added when I implement follow functionality
+  followers_count: number;
+  following_count: number;
 }

@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import { useUserEvents } from "@/hooks/useEvents";
-import { CreateEventData, Event, UpdateEventData } from "@/types/event";
+import { CreateEventData } from "@/types/event";
 import { EventService } from "@/services/event";
-import { EditEventModal } from "@/components/events/EditEventModal";
 import { CreateEventModal } from "@/components/events/CreateEventModal";
 import { ProfileActivity } from "@/types/profile";
+import { useRouter } from "next/navigation";
 
 interface ActivitiesTabProps {
   activities?: ProfileActivity[]; // Keep for backward compatibility if needed
@@ -15,12 +15,13 @@ interface ActivitiesTabProps {
 }
 
 export function ActivitiesTab({
+  activities,
   showCreateSection = false,
   onCreateActivity,
 }: ActivitiesTabProps) {
   const { events, loading, error, refreshEvents } = useUserEvents();
-  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [deletingEventId, setDeletingEventId] = useState<string | null>(null);
+  const router = useRouter();
 
   // Modal state for creating activities
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -31,18 +32,6 @@ export function ActivitiesTab({
       refreshEvents();
     } catch (error) {
       throw error; // Let the modal handle the error
-    }
-  };
-
-  const handleEditEvent = async (eventData: UpdateEventData) => {
-    if (!editingEvent) return;
-
-    try {
-      await EventService.updateEvent(editingEvent.id, eventData);
-      refreshEvents();
-      setEditingEvent(null);
-    } catch (error) {
-      throw error;
     }
   };
 
@@ -175,7 +164,53 @@ export function ActivitiesTab({
 
         {/* Activities List */}
         <div className="space-y-4">
-          {!events || events.length === 0 ? (
+          {/* If activities are provided (e.g., viewing other users), render those */}
+          {Array.isArray(activities) && activities.length > 0 ? (
+            activities.map((activity) => (
+              <div
+                key={activity.id}
+                className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 transition-all duration-200 hover:shadow-md cursor-pointer"
+                onClick={() => router.push(`/activity/${activity.id}`)}
+                title="Open activity"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-3 mb-3">
+                      <h3 className="font-semibold text-xl text-gray-900 dark:text-white">
+                        {activity.title}
+                      </h3>
+                      <span className="text-sm px-3 py-1 bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 rounded-full capitalize">
+                        {activity.type}
+                      </span>
+                    </div>
+                    <p className="text-base text-blue-600 dark:text-blue-400 mb-2 font-medium">
+                      {activity.sport}
+                    </p>
+                    {activity.description && (
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 leading-relaxed">
+                        {activity.description}
+                      </p>
+                    )}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-500 dark:text-gray-400 mb-3">
+                      <div className="flex items-center space-x-2">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3a2 2 0 012-2h4a2 2 0 012 2v4m-6 0V6a2 2 0 012-2h4a2 2 0 012 2v1m-6 0a2 2 0 002 2h4a2 2 0 002-2m-6 0h6a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V9a2 2 0 012-2z" />
+                        </svg>
+                        <span>{new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(activity.date)}</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <span>{activity.location}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : !events || events.length === 0 ? (
             <div className="text-center py-16 text-gray-500 dark:text-gray-400">
               <h4 className="text-lg font-semibold mb-2">No activities yet</h4>
               <p className="mb-4">
@@ -186,7 +221,9 @@ export function ActivitiesTab({
             events.map((event) => (
               <div
                 key={event.id}
-                className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 transition-all duration-200 hover:shadow-md"
+                className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 transition-all duration-200 hover:shadow-md cursor-pointer"
+                onClick={() => router.push(`/activity/${event.id}`)}
+                title="Open activity"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -303,26 +340,7 @@ export function ActivitiesTab({
                   {/* Action buttons */}
                   <div className="flex flex-col space-y-2 ml-4">
                     <button
-                      onClick={() => setEditingEvent(event)}
-                      className="p-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                      title="Edit activity"
-                    >
-                      <svg
-                        className="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                        />
-                      </svg>
-                    </button>
-                    <button
-                      onClick={() => handleDeleteEvent(event.id)}
+                      onClick={(e) => { e.stopPropagation(); handleDeleteEvent(event.id); }}
                       disabled={deletingEventId === event.id}
                       className="p-2 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
                       title="Delete activity"
@@ -352,16 +370,6 @@ export function ActivitiesTab({
           )}
         </div>
       </div>
-
-      {/* Edit Activity Modal */}
-      {editingEvent && (
-        <EditEventModal
-          isOpen={!!editingEvent}
-          event={editingEvent}
-          onClose={() => setEditingEvent(null)}
-          onSave={handleEditEvent}
-        />
-      )}
 
       {/* Create Activity Modal - Only render if not externally controlled */}
       {showCreateSection && (

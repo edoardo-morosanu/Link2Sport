@@ -20,6 +20,7 @@ import (
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
+	"strings"
 )
 
 // @title           Link2Sport API
@@ -73,7 +74,7 @@ func main() {
 	defer config.CloseDatabase()
 
 	// Run database migrations
-	if err := config.AutoMigrate(&models.User{}, &models.Follow{}, &models.Event{}, &models.EventParticipant{}, &models.Sport{}); err != nil {
+	if err := config.AutoMigrate(&models.User{}, &models.Follow{}, &models.Event{}, &models.EventParticipant{}, &models.Sport{}, &models.Post{}, &models.PostMention{}); err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}
 
@@ -111,6 +112,7 @@ func main() {
 	followController := controllers.NewFollowController()
 	eventController := controllers.NewEventController()
 	sportController := controllers.NewSportController()
+	postController := controllers.NewPostController()
 
 	// Setup routes
 	routes.SetupAuthRoutes(r, authController)
@@ -120,6 +122,14 @@ func main() {
 	routes.SetupFollowRoutes(r, followController)
 	routes.SetupEventRoutes(r, eventController)
 	routes.SetupSportRoutes(r, sportController)
+	routes.SetupPostRoutes(r, postController)
+
+	// Debug: log registered post routes
+	for _, ri := range r.Routes() {
+		if strings.HasPrefix(ri.Path, "/api/posts") {
+			log.Printf("Route registered: %s %s", ri.Method, ri.Path)
+		}
+	}
 
 	// API v1 routes (existing routes)
 	v1 := r.Group("/api/v1")

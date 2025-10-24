@@ -163,18 +163,23 @@ const FollowersList: React.FC<ExtendedFollowListProps> = ({
                   }}
                 >
                   <div className={styles.avatar}>
-                    {follower.has_avatar ? (
+                    {follower.has_avatar && follower.avatar_url ? (
                       <img
                         src={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"}${follower.avatar_url}`}
                         alt={`${follower.display_name}'s avatar`}
                         className={styles.avatarImage}
+                        onError={(e) => {
+                          const target = e.currentTarget as HTMLImageElement;
+                          target.onerror = null;
+                          target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(follower.username || follower.display_name || "User")}&size=200&background=3b82f6&color=fff`;
+                        }}
                       />
                     ) : (
-                      <div className={styles.avatarPlaceholder}>
-                        {follower.display_name?.charAt(0)?.toUpperCase() ||
-                          follower.username?.charAt(0)?.toUpperCase() ||
-                          "?"}
-                      </div>
+                      <img
+                        src={`https://ui-avatars.com/api/?name=${encodeURIComponent(follower.username || follower.display_name || "User")}&size=200&background=3b82f6&color=fff`}
+                        alt={`${follower.display_name}'s avatar`}
+                        className={styles.avatarImage}
+                      />
                     )}
                   </div>
 

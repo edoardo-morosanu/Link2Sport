@@ -3,7 +3,7 @@ package types
 // SearchUsersRequest represents the request for searching users
 // @Description User search request parameters
 type SearchUsersRequest struct {
-	Query  string `form:"q" binding:"required,min=2" example:"john" description:"Search query (minimum 2 characters)"`
+	Query  string `form:"q" binding:"required,min=1" example:"john" description:"Search query (minimum 1 character)"`
 	Limit  int    `form:"limit,default=10" example:"10" description:"Number of results per page (1-50)"`
 	Offset int    `form:"offset,default=0" example:"0" description:"Number of results to skip"`
 }

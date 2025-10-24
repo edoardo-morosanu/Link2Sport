@@ -160,6 +160,21 @@ export class EventService {
     return response.map((event: any) => this.mapEventResponse(event));
   }
 
+  // Get events by organizer (user) ID
+  static async getUserEventsById(userId: string | number): Promise<Event[]> {
+    const response = await this.makeAuthenticatedRequest(
+      `${API_BASE_URL}/api/events/user/${userId}`,
+      {
+        method: "GET",
+      },
+    );
+
+    if (!response || !Array.isArray(response)) {
+      return [];
+    }
+    return response.map((event: any) => this.mapEventResponse(event));
+  }
+
   // Get specific event by ID
   static async getEvent(eventId: string): Promise<EventWithOrganizer> {
     const response = await this.makeAuthenticatedRequest(
@@ -234,18 +249,23 @@ export class EventService {
       return [];
     }
 
-    return response.map((participant: any) => ({
-      id: participant.id?.toString() || "",
-      event_id: participant.event_id?.toString() || "",
-      user_id: participant.user_id?.toString() || "",
-      role: participant.role || "",
-      joined_at: new Date(participant.joined_at),
-      username: participant.User?.username || "",
-      name: participant.User?.display_name || participant.User?.username || "",
-      avatar: participant.User?.avatar_url
-        ? `${API_BASE_URL}${participant.User.avatar_url}`
-        : undefined,
-    }));
+    return response.map((participant: any) => {
+      const user = participant.User || participant.user || {};
+      const username = participant.username || user.username || "";
+      const displayName =
+        participant.name || user.display_name || user.username || username || "";
+      const avatarPath = participant.avatar_url || user.avatar_url;
+      return {
+        id: participant.id?.toString() || "",
+        event_id: participant.event_id?.toString() || "",
+        user_id: participant.user_id?.toString() || "",
+        role: participant.role || "",
+        joined_at: new Date(participant.joined_at),
+        username,
+        name: displayName,
+        avatar: avatarPath ? `${API_BASE_URL}${avatarPath}` : undefined,
+      } as EventParticipant;
+    });
   }
 
   // Force update event statuses

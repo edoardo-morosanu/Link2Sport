@@ -15,6 +15,77 @@ import (
 
 type EventController struct{}
 
+// GetUserEventsByID godoc
+// @Summary      Get events by user ID
+// @Description  Retrieve events created by the specified user ID
+// @Tags         Events
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id path int true "User ID"
+// @Success      200 {array} types.EventResponse "List of user's events"
+// @Failure      400 {object} types.ErrorResponse "Invalid user ID"
+// @Failure      401 {object} types.ErrorResponse "User not authenticated"
+// @Router       /events/user/{id} [get]
+func (ec *EventController) GetUserEventsByID(c *gin.Context) {
+    _, exists := c.Get("userID")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, types.ErrorResponse{
+            Error:   "Unauthorized",
+            Message: "User not authenticated",
+        })
+        return
+    }
+
+    userParam := c.Param("id")
+    uid, err := strconv.ParseUint(userParam, 10, 32)
+    if err != nil {
+        c.JSON(http.StatusBadRequest, types.ErrorResponse{
+            Error:   "Invalid user ID",
+            Message: "User ID must be a valid number",
+        })
+        return
+    }
+
+    var events []models.Event
+    if err := config.DB.Where("organizer_id = ? AND deleted_at IS NULL", uint(uid)).Order("start_at DESC").Find(&events).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, types.ErrorResponse{
+            Error:   "Database error",
+            Message: "Failed to fetch user events",
+        })
+        return
+    }
+
+    response := make([]types.EventResponse, 0, len(events))
+    for _, event := range events {
+        var participantCount int64
+        config.DB.Model(&models.EventParticipant{}).Where("event_id = ?", event.ID).Count(&participantCount)
+
+        eventResponse := types.EventResponse{
+            ID:           event.ID,
+            OrganizerID:  event.OrganizerID,
+            Type:         types.EventType(event.Type),
+            Title:        event.Title,
+            Description:  event.Description,
+            Sport:        event.Sport,
+            StartAt:      event.StartAt,
+            EndAt:        event.EndAt,
+            LocationName: event.LocationName,
+            Latitude:     *event.Latitude,
+            Longitude:    *event.Longitude,
+            Capacity:     event.Capacity,
+            Participants: int(participantCount),
+            Status:       types.EventStatus(event.Status),
+            CreatedAt:    event.CreatedAt,
+            UpdatedAt:    event.UpdatedAt,
+        }
+
+        response = append(response, eventResponse)
+    }
+
+    c.JSON(http.StatusOK, response)
+}
+
 func NewEventController() *EventController {
 	return &EventController{}
 }
@@ -139,7 +210,7 @@ func (ec *EventController) GetEvents(c *gin.Context) {
 	}
 
 	var events []models.Event
-	if err := query.Limit(limit).Offset(offset).Order("start_at ASC").Find(&events).Error; err != nil {
+	if err := query.Limit(limit).Offset(offset).Order("start_at DESC").Find(&events).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, types.ErrorResponse{
 			Error:   "Database error",
 			Message: "Failed to fetch events",
@@ -212,7 +283,7 @@ func (ec *EventController) GetUserEvents(c *gin.Context) {
 	}
 
 	var events []models.Event
-	if err := config.DB.Where("organizer_id = ? AND deleted_at IS NULL", userID).Order("start_at ASC").Find(&events).Error; err != nil {
+	if err := config.DB.Where("organizer_id = ? AND deleted_at IS NULL", userID).Order("start_at DESC").Find(&events).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, types.ErrorResponse{
 			Error:   "Database error",
 			Message: "Failed to fetch user events",

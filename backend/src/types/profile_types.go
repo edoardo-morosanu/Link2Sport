@@ -17,6 +17,7 @@ type ProfileResponse struct {
 	HasAvatar      bool      `json:"has_avatar" example:"true" description:"Whether user has uploaded an avatar"`
 	FollowersCount int       `json:"followers_count" example:"42" description:"Number of followers"`
 	FollowingCount int       `json:"following_count" example:"15" description:"Number of users being followed"`
+	ActivitiesCount int      `json:"activities_count" example:"5" description:"Number of non-cancelled activities created by the user"`
 	CreatedAt      time.Time `json:"created_at" example:"2024-01-15T10:30:00Z" description:"Account creation timestamp"`
 	UpdatedAt      time.Time `json:"updated_at" example:"2024-01-20T14:45:00Z" description:"Last profile update timestamp"`
 }
@@ -45,6 +46,7 @@ type PublicProfileResponse struct {
 	HasAvatar      bool      `json:"has_avatar" example:"true" description:"Whether user has uploaded an avatar"`
 	FollowersCount int       `json:"followers_count" example:"42" description:"Number of followers"`
 	FollowingCount int       `json:"following_count" example:"15" description:"Number of users being followed"`
+	ActivitiesCount int      `json:"activities_count" example:"5" description:"Number of non-cancelled activities created by the user"`
 	CreatedAt      time.Time `json:"created_at" example:"2024-01-15T10:30:00Z" description:"Account creation timestamp"`
 	UpdatedAt      time.Time `json:"updated_at" example:"2024-01-20T14:45:00Z" description:"Last profile update timestamp"`
 	IsFollowing    bool      `json:"is_following" example:"false" description:"Whether current user is following this user"`

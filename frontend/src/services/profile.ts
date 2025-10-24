@@ -72,7 +72,7 @@ export class ProfileService {
         : "",
       followersCount: response.followers_count || 0,
       followingCount: response.following_count || 0,
-      activitiesCount: 0, // This would come from a separate API call
+      activitiesCount: response.activities_count || 0,
       profilePicture: response.avatar_url || "",
       avatarUrl: response.avatar_url
         ? `${API_BASE_URL}${response.avatar_url}`

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useEvents } from "@/hooks/useEvents";
 import { EventWithOrganizer, EventFilters, EventType } from "@/types/event";
 import { EventService } from "@/services/event";
+import { useRouter } from "next/navigation";
 
 interface EventListProps {
   showFilters?: boolean;
@@ -16,6 +17,7 @@ export function EventList({
   showJoinActions = true,
   initialFilters,
 }: EventListProps) {
+  const router = useRouter();
   const [filters, setFilters] = useState<EventFilters>(initialFilters || {});
   const { events, loading, error, refreshEvents, joinEvent, leaveEvent } =
     useEvents(filters);
@@ -235,7 +237,8 @@ export function EventList({
           events.map((event) => (
             <div
               key={event.id}
-              className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700 transition-colors duration-300"
+              className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700 transition-colors duration-300 cursor-pointer hover:shadow-md"
+              onClick={() => router.push(`/activity/${event.id}`)}
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
@@ -259,17 +262,24 @@ export function EventList({
 
                   {/* Organizer info */}
                   <div className="flex items-center space-x-2 mb-3">
-                    <div className="w-8 h-8 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center">
+                    <div className="w-8 h-8 bg-gray-300 dark:bg-gray-600 rounded-full overflow-hidden flex items-center justify-center">
                       {event.organizer_avatar ? (
                         <img
                           src={event.organizer_avatar}
                           alt={event.organizer_name}
                           className="w-8 h-8 rounded-full object-cover"
+                          onError={(e) => {
+                            const target = e.currentTarget as HTMLImageElement;
+                            target.onerror = null;
+                            target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(event.organizer_username || event.organizer_name || "User")}&size=200&background=3b82f6&color=fff`;
+                          }}
                         />
                       ) : (
-                        <span className="text-xs text-gray-600 dark:text-gray-400">
-                          {event.organizer_name.charAt(0).toUpperCase()}
-                        </span>
+                        <img
+                          src={`https://ui-avatars.com/api/?name=${encodeURIComponent(event.organizer_username || event.organizer_name || "User")}&size=200&background=3b82f6&color=fff`}
+                          alt={event.organizer_name}
+                          className="w-8 h-8 rounded-full object-cover"
+                        />
                       )}
                     </div>
                     <div>
@@ -384,7 +394,7 @@ export function EventList({
                     <div className="flex space-x-2">
                       {canJoinEvent(event) && (
                         <button
-                          onClick={() => handleJoinEvent(event.id)}
+                          onClick={(e) => { e.stopPropagation(); handleJoinEvent(event.id); }}
                           disabled={joiningEventId === event.id}
                           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 disabled:opacity-50 flex items-center space-x-2"
                         >
@@ -415,7 +425,7 @@ export function EventList({
 
                       {canLeaveEvent(event) && (
                         <button
-                          onClick={() => handleLeaveEvent(event.id)}
+                          onClick={(e) => { e.stopPropagation(); handleLeaveEvent(event.id); }}
                           disabled={leavingEventId === event.id}
                           className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200 disabled:opacity-50 flex items-center space-x-2"
                         >

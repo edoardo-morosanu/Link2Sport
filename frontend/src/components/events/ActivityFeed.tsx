@@ -508,17 +508,24 @@ export function ActivityFeed() {
             >
               {/* Event Header */}
               <div className="flex items-start space-x-4">
-                <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center flex-shrink-0">
+                <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0">
                   {event.organizer_avatar ? (
                     <img
                       src={event.organizer_avatar}
                       alt={event.organizer_name}
                       className="w-12 h-12 rounded-full object-cover"
+                      onError={(e) => {
+                        const target = e.currentTarget as HTMLImageElement;
+                        target.onerror = null;
+                        target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(event.organizer_username || event.organizer_name || "User")}&size=200&background=3b82f6&color=fff`;
+                      }}
                     />
                   ) : (
-                    <span className="text-lg font-semibold text-gray-600 dark:text-gray-300">
-                      {event.organizer_name.charAt(0).toUpperCase()}
-                    </span>
+                    <img
+                      src={`https://ui-avatars.com/api/?name=${encodeURIComponent(event.organizer_username || event.organizer_name || "User")}&size=200&background=3b82f6&color=fff`}
+                      alt={event.organizer_name}
+                      className="w-12 h-12 rounded-full object-cover"
+                    />
                   )}
                 </div>
 

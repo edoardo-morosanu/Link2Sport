@@ -34,40 +34,17 @@ export function ProfileHeader({
       <div className="flex items-start space-x-6">
         {/* Profile Picture */}
         <div className="w-24 h-24 bg-gray-200 dark:bg-gray-600 rounded-full border-4 border-white dark:border-gray-800 shadow-md overflow-hidden transition-colors duration-300">
-          {avatarUrl ? (
-            <img
-              src={avatarUrl}
-              alt={`${name}'s avatar`}
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                // Fallback to default avatar on error
-                e.currentTarget.style.display = "none";
-                e.currentTarget.parentElement!.innerHTML = `
-                  <div class="w-full h-full flex items-center justify-center bg-gray-200 dark:bg-gray-600">
-                    <svg class="w-12 h-12 text-gray-400 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                  </div>
-                `;
-              }}
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <svg
-                className="w-12 h-12 text-gray-400 dark:text-gray-300"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                />
-              </svg>
-            </div>
-          )}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={hasAvatar && userId ? AvatarService.getAvatarUrl(userId) : `https://ui-avatars.com/api/?name=${encodeURIComponent(username || name || "User")}&size=200&background=3b82f6&color=fff`}
+            alt={`${name}'s avatar`}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              const target = e.currentTarget as HTMLImageElement;
+              target.onerror = null;
+              target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(username || name || "User")}&size=200&background=3b82f6&color=fff`;
+            }}
+          />
         </div>
 
         {/* Profile Info */}
@@ -111,14 +88,17 @@ export function ProfileHeader({
                 following
               </div>
             </button>
-            <div className="text-center">
+            <button
+              type="button"
+              className="text-center p-2 rounded-md transition-colors cursor-default"
+            >
               <div className="text-xl font-bold text-gray-900 dark:text-white transition-colors duration-300">
                 {activitiesCount}
               </div>
               <div className="text-sm text-gray-600 dark:text-gray-400 transition-colors duration-300">
                 activities
               </div>
-            </div>
+            </button>
           </div>
 
           {/* Bio */}
