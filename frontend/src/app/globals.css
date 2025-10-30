@@ -1,8 +1,50 @@
 @import "tailwindcss";
 
 :root {
-    --background: #ffffff;
-    --foreground: #171717;
+    /* Base (Light Theme) */
+    --background: #f8fafc; /* slate-50 */
+    --foreground: #0b1220; /* near-slate-950 */
+
+    /* Surface & Borders */
+    --card-bg: #ffffff;
+    --card-hover-bg: #f3f6fb;
+    --border-color: #e5e7eb; /* gray-200 */
+
+    /* Text */
+    --text-primary: #0b1220;
+    --text-secondary: #475569; /* slate-600 */
+    --text-muted: #64748b; /* slate-500 */
+
+    /* Accents */
+    --accent-bg: #e6f0ff; /* soft blue */
+    --accent-text: #2563eb; /* blue-600 */
+
+    /* Design tokens */
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.06);
+    --shadow-md: 0 8px 24px rgba(0,0,0,0.08);
+    --ring: 0 0 0 3px rgba(59,130,246,0.20);
+}
+
+/* Fallback: honor OS-level dark preference when no .dark class is applied */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --background: #0b1220;
+        --foreground: #e5e7eb;
+
+        --card-bg: #0f172a;
+        --card-hover-bg: #0b1624;
+        --border-color: #243042;
+
+        --text-primary: #e5e7eb;
+        --text-secondary: #cbd5e1;
+        --text-muted: #94a3b8;
+
+        --accent-bg: rgba(59, 130, 246, 0.15);
+        --accent-text: #93c5fd;
+    }
 }
 
 @layer base {
@@ -14,17 +56,80 @@
     }
 }
 
-@media (prefers-color-scheme: dark) {
-    :root {
-        --background: #0a0a0a;
-        --foreground: #ededed;
-    }
+/* Dark theme overrides (class-based) */
+.dark {
+    --background: #0b1220; /* custom deep slate */
+    --foreground: #e5e7eb; /* gray-200 */
+
+    --card-bg: #0f172a; /* slate-900 */
+    --card-hover-bg: #0b1624; /* slightly lighter hover */
+    --border-color: #243042; /* slate-800-ish */
+
+    --text-primary: #e5e7eb;
+    --text-secondary: #cbd5e1; /* slate-300 */
+    --text-muted: #94a3b8; /* slate-400 */
+
+    --accent-bg: rgba(59, 130, 246, 0.15); /* blue-500 alpha */
+    --accent-text: #93c5fd; /* blue-300 */
+}
+
+/* Force light (overrides OS dark) */
+.light {
+    --background: #f8fafc; /* slate-50 */
+    --foreground: #0b1220; /* near-slate-950 */
+
+    --card-bg: #ffffff;
+    --card-hover-bg: #f3f6fb;
+    --border-color: #e5e7eb; /* gray-200 */
+
+    --text-primary: #0b1220;
+    --text-secondary: #475569; /* slate-600 */
+    --text-muted: #64748b; /* slate-500 */
+
+    --accent-bg: #e6f0ff; /* soft blue */
+    --accent-text: #2563eb; /* blue-600 */
 }
 
 body {
     background: var(--background);
     color: var(--foreground);
-    font-family: Arial, Helvetica, sans-serif;
+    font-family: var(--font-sans), ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Noto Sans", sans-serif;
+    line-height: 1.5;
+}
+
+html, body {
+    color-scheme: light dark;
+}
+
+a {
+    color: var(--accent-text);
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+/* Accessible focus styles */
+:where(button, a, input, textarea, select):focus-visible {
+    outline: 2px solid var(--accent-text);
+    outline-offset: 2px;
+}
+
+/* Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation: none !important;
+        transition: none !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* Base typography scale */
+@layer base {
+    h1 { font-weight: 800; letter-spacing: -0.02em; font-size: clamp(1.875rem, 1.2rem + 1.5vw, 2.5rem); }
+    h2 { font-weight: 700; letter-spacing: -0.01em; font-size: clamp(1.5rem, 1.1rem + 1vw, 2rem); }
+    h3 { font-weight: 600; font-size: clamp(1.25rem, 1rem + 0.6vw, 1.5rem); }
 }
 
 /* Subtle Glassmorphism Effects */

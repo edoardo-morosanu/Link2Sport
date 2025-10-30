@@ -58,6 +58,16 @@ export type EventStatus = "upcoming" | "active" | "complete" | "cancelled";
 export interface EventFilters {
   sport?: string;
   type?: EventType;
+  location?: string;
+  scope?: "all" | "following";
+  lat?: number;
+  lng?: number;
+  radius_km?: number;
+  status?: string;
+  start_after?: string;
+  start_before?: string;
+  min_capacity?: number;
+  max_capacity?: number;
   limit?: number;
   offset?: number;
 }

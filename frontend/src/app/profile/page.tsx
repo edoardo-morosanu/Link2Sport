@@ -14,6 +14,8 @@ import { MediaTab } from "@/components/profile/MediaTab";
 import { AllTab } from "@/components/profile/AllTab";
 import { EditProfileModal } from "@/components/profile/EditProfileModal";
 import { FollowersModal, FollowingModal } from "@/components/Follow";
+import { useMyPosts } from "@/hooks/usePosts";
+import { AppShell } from "@/components/layout/AppShell";
 
 // Loading state component
 function ProfileLoadingState() {
@@ -74,6 +76,7 @@ function ProfileContent({
   setIsEditModalOpen,
   setShowFollowersModal,
   setShowFollowingModal,
+  onPostCreated,
 }: {
   profile: UserProfile;
   activeTab: "all" | "posts" | "activities" | "media";
@@ -83,27 +86,28 @@ function ProfileContent({
   setIsEditModalOpen: (open: boolean) => void;
   setShowFollowersModal: (open: boolean) => void;
   setShowFollowingModal: (open: boolean) => void;
+  onPostCreated?: () => void;
 }) {
   const renderTabContent = () => {
     switch (activeTab) {
       case "all":
-        return <AllTab />;
+        return <AllTab onPostCreated={onPostCreated} />;
       case "posts":
         return <PostsTab posts={posts} profileName={profile.name} />;
       case "activities":
-        return <ActivitiesTab activities={activities} />;
+        return <ActivitiesTab />;
       case "media":
-        return <MediaTab />;
+        return <MediaTab posts={posts} />;
       default:
         return null;
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+    <div className="min-h-screen bg-[var(--background)] transition-colors duration-300 pb-24 md:pb-0">
       <AppHeader />
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm transition-colors duration-300">
+      <AppShell className="pt-8">
+        <div className="bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl shadow-sm transition-colors duration-300">
           <ProfileHeader
             name={profile.name}
             username={profile.username}
@@ -121,7 +125,7 @@ function ProfileContent({
           <ProfileTabs activeTab={activeTab} onTabChange={setActiveTab} />
           <div className="p-6">{renderTabContent()}</div>
         </div>
-      </div>
+      </AppShell>
     </div>
   );
 }
@@ -145,6 +149,14 @@ export default function ProfilePage() {
   const [posts, setPosts] = useState<ProfilePost[]>([]);
   const [activities, setActivities] = useState<ProfileActivity[]>([]);
 
+  // Posts from backend
+  const {
+    posts: myPosts,
+    loading: postsLoading,
+    error: postsError,
+    refreshPosts: refreshMyPosts,
+  } = useMyPosts();
+
   // Authentication check
   const shouldRedirectToLogin = !authLoading && !user;
 
@@ -153,17 +165,7 @@ export default function ProfilePage() {
 
   // Data initialization
   const initializeMockData = (profile: UserProfile) => {
-    setPosts([
-      {
-        id: "1",
-        userId: profile.id,
-        content: `Had an amazing ${profile.sports[0] || "sports"} session today! Thanks to everyone who joined.`,
-        timestamp: new Date("2024-10-04"),
-        likes: 15,
-        comments: 3,
-      },
-    ]);
-
+    // Keep activities mocked for now
     setActivities([
       {
         id: "1",
@@ -202,6 +204,25 @@ export default function ProfilePage() {
     }
   }, [profile]);
 
+  // Map backend posts to ProfilePost
+  useEffect(() => {
+    if (myPosts && profile) {
+      const mapped = myPosts.map((p) => ({
+        id: p.id,
+        userId: p.user_id,
+        title: p.title,
+        content: p.body,
+        timestamp: p.created_at,
+        images: p.image_url ? [p.image_url] : undefined,
+        likes: 0,
+        comments: 0,
+        mentions: p.mentions || [],
+      }));
+      setPosts(mapped);
+    }
+  }, [myPosts, profile]);
+
+
   // Early returns for different states
   if (isLoading) {
     return <ProfileLoadingState />;
@@ -226,6 +247,7 @@ export default function ProfilePage() {
         setIsEditModalOpen={setIsEditModalOpen}
         setShowFollowersModal={setShowFollowersModal}
         setShowFollowingModal={setShowFollowingModal}
+        onPostCreated={refreshMyPosts}
       />
       <EditProfileModal
         isOpen={isEditModalOpen}
@@ -255,6 +277,7 @@ export default function ProfilePage() {
         }}
         showFollowButtons={true}
       />
+
     </>
   );
 }

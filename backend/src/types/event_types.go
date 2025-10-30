@@ -87,14 +87,25 @@ type EventWithOrganizerResponse struct {
 func CalculateEventStatus(startAt time.Time, endAt *time.Time) EventStatus {
 	now := time.Now()
 
+	// Before start -> upcoming
 	if now.Before(startAt) {
 		return EventStatusUpcoming
 	}
 
+	// If end time exists and has passed -> complete
 	if endAt != nil && now.After(*endAt) {
 		return EventStatusComplete
 	}
 
+	// If no end time provided, mark complete 1 hour after start
+	if endAt == nil {
+		cutoff := startAt.Add(1 * time.Hour)
+		if !now.Before(cutoff) {
+			return EventStatusComplete
+		}
+	}
+
+	// Otherwise -> active
 	return EventStatusActive
 }
 

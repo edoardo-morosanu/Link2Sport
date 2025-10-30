@@ -26,6 +26,7 @@ export class ProfileService {
       }
       throw new Error(`Request failed with status ${response.status}`);
     }
+    if (response.status === 204) return null;
     return await response.json();
   }
 
@@ -72,7 +73,7 @@ export class ProfileService {
         : "",
       followersCount: response.followers_count || 0,
       followingCount: response.following_count || 0,
-      activitiesCount: 0, // This would come from a separate API call
+      activitiesCount: response.activities_count || 0,
       profilePicture: response.avatar_url || "",
       avatarUrl: response.avatar_url
         ? `${API_BASE_URL}${response.avatar_url}`
@@ -86,6 +87,12 @@ export class ProfileService {
     return await this.makeAuthenticatedRequest(`${API_BASE_URL}/api/profile`, {
       method: "PUT",
       body: JSON.stringify(profileData),
+    });
+  }
+
+  static async deleteAccount(): Promise<void> {
+    await this.makeAuthenticatedRequest(`${API_BASE_URL}/api/profile`, {
+      method: "DELETE",
     });
   }
 }

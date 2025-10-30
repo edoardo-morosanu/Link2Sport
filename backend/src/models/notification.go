@@ -12,7 +12,7 @@ type Notification struct {
 	ID        uint                   `json:"id" gorm:"primaryKey"`
 	UserID    uint                   `json:"user_id" gorm:"not null"`
 	ActorID   *uint                  `json:"actor_id"`
-	Type      types.NotificationType `json:"type" gorm:"type:notification_type"`
+	Type      types.NotificationType `json:"type" gorm:"type:text"`
 	Payload   types.JSON             `json:"payload" gorm:"type:jsonb"`
 	Read      bool                   `json:"read" gorm:"default:false"`
 	User      User                   `json:"user" gorm:"foreignKey:UserID"`

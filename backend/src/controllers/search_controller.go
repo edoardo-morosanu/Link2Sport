@@ -81,10 +81,10 @@ func (sc *SearchController) validateSearchRequest(c *gin.Context) (types.SearchU
 		return req, false
 	}
 
-	if len(strings.TrimSpace(req.Query)) < 2 {
+	if len(strings.TrimSpace(req.Query)) < 1 {
 		c.JSON(http.StatusBadRequest, types.ErrorResponse{
 			Error:   "Invalid query",
-			Message: "Search Query must be at least 2 characters long",
+			Message: "Search Query must be at least 1 character long",
 		})
 		return req, false
 	}
@@ -110,8 +110,8 @@ func (sc *SearchController) executeUserSearch(c *gin.Context, req types.SearchUs
 	searchTerm := "%" + strings.ToLower(req.Query) + "%"
 
 	query := config.DB.Model(&models.User{}).Where(
-		"(LOWER(username) LIKE ? OR LOWER(display_name) LIKE ?) AND id != ?",
-		searchTerm, searchTerm, userID,
+		"LOWER(username) LIKE ? OR LOWER(display_name) LIKE ?",
+		searchTerm, searchTerm,
 	)
 
 	if err := query.Count(&total).Error; err != nil {

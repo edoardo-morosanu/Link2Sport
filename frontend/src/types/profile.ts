@@ -20,11 +20,13 @@ export interface UserProfile {
 export interface ProfilePost {
   id: string;
   userId: string;
+  title?: string;
   content: string;
   timestamp: Date;
   images?: string[];
   likes?: number;
   comments?: number;
+  mentions?: string[];
 }
 
 // Keep ProfileActivity for backward compatibility, but now extends Event structure

@@ -8,6 +8,7 @@ interface PublicProfileHeaderProps {
   isFollowing: boolean;
   followLoading: boolean;
   onFollow: () => void;
+  renderFollow?: React.ReactNode;
 }
 
 // Avatar component
@@ -23,38 +24,25 @@ function ProfileAvatar({
   return (
     <div className="flex-shrink-0">
       <div className="w-24 h-24 rounded-full overflow-hidden bg-gradient-to-br from-blue-400 to-purple-500 mx-auto sm:mx-0 flex items-center justify-center">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         {hasAvatar ? (
-          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={AvatarService.getAvatarUrl(userId)}
             alt={`${displayName}'s avatar`}
             className="w-full h-full object-cover"
             onError={(e) => {
-              // Fallback to default avatar on error
-              const target = e.currentTarget;
-              target.style.display = "none";
-              if (target.nextSibling) {
-                (target.nextSibling as HTMLElement).style.display = "flex";
-              }
+              const target = e.currentTarget as HTMLImageElement;
+              target.onerror = null;
+              target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName || "User")}&size=200&background=3b82f6&color=fff`;
             }}
           />
-        ) : null}
-        <div
-          className={`w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-400 to-purple-500 ${hasAvatar ? "hidden" : ""}`}
-          style={{ display: hasAvatar ? "none" : "flex" }}
-        >
-          <svg
-            className="w-12 h-12 text-white"
-            fill="currentColor"
-            viewBox="0 0 20 20"
-          >
-            <path
-              fillRule="evenodd"
-              d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
-              clipRule="evenodd"
-            />
-          </svg>
-        </div>
+        ) : (
+          <img
+            src={`https://ui-avatars.com/api/?name=${encodeURIComponent(displayName || "User")}&size=200&background=3b82f6&color=fff`}
+            alt={`${displayName}'s avatar`}
+            className="w-full h-full object-cover"
+          />
+        )}
       </div>
     </div>
   );
@@ -64,10 +52,10 @@ function ProfileAvatar({
 function ProfileBasicInfo({ profile }: { profile: PublicUserProfile }) {
   return (
     <div className="mb-4">
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
+      <h1 className="text-2xl font-bold text-[var(--text-primary)] mb-1">
         {profile.display_name}
       </h1>
-      <p className="text-gray-600 dark:text-gray-400">@{profile.username}</p>
+      <p className="text-[var(--text-muted)]">@{profile.username}</p>
     </div>
   );
 }
@@ -77,7 +65,7 @@ function ProfileBio({ bio }: { bio?: string }) {
   if (!bio) return null;
 
   return (
-    <p className="text-gray-700 dark:text-gray-300 mb-4 max-w-md">{bio}</p>
+    <p className="text-[var(--text-secondary)] mb-4 max-w-md">{bio}</p>
   );
 }
 
@@ -92,7 +80,7 @@ function ProfileLocation({
   if (!city && !country) return null;
 
   return (
-    <div className="flex items-center justify-center sm:justify-start mb-4 text-gray-600 dark:text-gray-400">
+    <div className="flex items-center justify-center sm:justify-start mb-4 text-[var(--text-muted)]">
       <svg
         className="w-4 h-4 mr-2"
         fill="none"
@@ -126,7 +114,7 @@ function ProfileSports({ sports }: { sports?: string[] }) {
       {sports.map((sport, index) => (
         <span
           key={index}
-          className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm font-medium"
+          className="px-3 py-1 bg-[var(--card-hover-bg)] text-[var(--text-secondary)] rounded-full text-sm font-medium"
         >
           {sport}
         </span>
@@ -148,10 +136,10 @@ function ProfileStats() {
     <div className="flex justify-center sm:justify-start gap-6 mb-4 text-sm">
       {stats.map(({ label, value }) => (
         <div key={label} className="text-center">
-          <div className="font-semibold text-gray-900 dark:text-white">
+          <div className="font-semibold text-[var(--text-primary)]">
             {value}
           </div>
-          <div className="text-gray-600 dark:text-gray-400">{label}</div>
+          <div className="text-[var(--text-muted)]">{label}</div>
         </div>
       ))}
     </div>
@@ -159,7 +147,7 @@ function ProfileStats() {
 }
 
 // Follow button component
-function FollowButton({
+function LocalFollowButton({
   isFollowing,
   followLoading,
   onFollow,
@@ -215,8 +203,8 @@ function MemberSince({ createdAt }: { createdAt: string }) {
   };
 
   return (
-    <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 text-center sm:text-left">
-      <p className="text-sm text-gray-600 dark:text-gray-400">
+    <div className="mt-4 pt-4 border-t border-[var(--border-color)] text-center sm:text-left">
+      <p className="text-sm text-[var(--text-muted)]">
         Member since {formatDate(createdAt)}
       </p>
     </div>
@@ -228,9 +216,10 @@ export function PublicProfileHeader({
   isFollowing,
   followLoading,
   onFollow,
+  renderFollow,
 }: PublicProfileHeaderProps) {
   return (
-    <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+    <div className="p-6 border-b border-[var(--border-color)]">
       <div className="flex flex-col sm:flex-row gap-6">
         <ProfileAvatar
           userId={profile.id}
@@ -246,11 +235,13 @@ export function PublicProfileHeader({
           <ProfileStats />
         </div>
 
-        <FollowButton
-          isFollowing={isFollowing}
-          followLoading={followLoading}
-          onFollow={onFollow}
-        />
+        {renderFollow ?? (
+          <LocalFollowButton
+            isFollowing={isFollowing}
+            followLoading={followLoading}
+            onFollow={onFollow}
+          />
+        )}
       </div>
 
       <MemberSince createdAt={profile.created_at} />

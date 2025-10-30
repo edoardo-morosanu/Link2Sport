@@ -163,18 +163,23 @@ const FollowingList: React.FC<ExtendedFollowListProps> = ({
                   }}
                 >
                   <div className={styles.avatar}>
-                    {user.has_avatar ? (
+                    {user.has_avatar && user.avatar_url ? (
                       <img
-                        src={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"}${user.avatar_url}`}
+                        src={`/api/proxy-avatar?src=${encodeURIComponent(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"}${user.avatar_url}`)}`}
+                        alt={`${user.display_name}'s avatar`}
+                        className={styles.avatarImage}
+                        onError={(e) => {
+                          const target = e.currentTarget as HTMLImageElement;
+                          target.onerror = null;
+                          target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username || user.display_name || "User")}&size=200&background=3b82f6&color=fff`;
+                        }}
+                      />
+                    ) : (
+                      <img
+                        src={`https://ui-avatars.com/api/?name=${encodeURIComponent(user.username || user.display_name || "User")}&size=200&background=3b82f6&color=fff`}
                         alt={`${user.display_name}'s avatar`}
                         className={styles.avatarImage}
                       />
-                    ) : (
-                      <div className={styles.avatarPlaceholder}>
-                        {user.display_name?.charAt(0)?.toUpperCase() ||
-                          user.username?.charAt(0)?.toUpperCase() ||
-                          "?"}
-                      </div>
                     )}
                   </div>
 
@@ -199,7 +204,7 @@ const FollowingList: React.FC<ExtendedFollowListProps> = ({
                         handleFollowChange(user.id, isFollowing)
                       }
                       size="small"
-                      variant="following"
+                      variant="secondary"
                     />
                   )}
 

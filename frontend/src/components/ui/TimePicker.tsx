@@ -71,7 +71,7 @@ export function TimePicker({
   return (
     <div className="relative" ref={dropdownRef}>
       {label && (
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
           {label}
         </label>
       )}
@@ -84,7 +84,7 @@ export function TimePicker({
           onChange={handleInputChange}
           placeholder={placeholder}
           disabled={disabled}
-          className={`w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white ${className}`}
+          className={`w-full px-4 py-3 border border-[var(--border-color)] rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--card-hover-bg)] text-[var(--text-primary)] ${className}`}
         />
 
         <div className="absolute inset-y-0 right-10 flex items-center">
@@ -100,9 +100,9 @@ export function TimePicker({
       </div>
 
       {isOpen && (
-        <div className="absolute z-50 mt-2 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg">
+        <div className="absolute z-50 mt-2 w-64 bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl shadow-lg">
           <div className="p-4">
-            <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
+            <div className="text-xs font-medium text-[var(--text-muted)] mb-2">
               Quick Select
             </div>
             <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto">
@@ -113,7 +113,7 @@ export function TimePicker({
                   className={`px-3 py-2 text-sm rounded-lg transition-colors ${
                     value === time
                       ? "bg-blue-600 text-white"
-                      : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/50"
+                      : "bg-[var(--card-hover-bg)] text-[var(--text-secondary)] hover:bg-blue-100"
                   }`}
                 >
                   {time}
@@ -121,10 +121,10 @@ export function TimePicker({
               ))}
             </div>
 
-            <div className="flex justify-end mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <div className="flex justify-end mt-4 pt-4 border-t border-[var(--border-color)]">
               <button
                 onClick={() => setIsOpen(false)}
-                className="px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                className="px-3 py-1 text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)]"
               >
                 Close
               </button>

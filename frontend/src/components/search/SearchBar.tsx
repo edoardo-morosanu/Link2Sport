@@ -1,8 +1,11 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { SearchService } from "@/services/search";
+import { AuthService } from "@/services/auth";
 import { AvatarService } from "@/services/avatar";
 import { SearchUser } from "@/types/search";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -20,6 +23,8 @@ export function SearchBar({ onClose }: SearchBarProps) {
   const searchRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+  const [dropdownPos, setDropdownPos] = useState<{ left: number; top: number; width: number } | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const debouncedQuery = useDebounce(query, 300);
 
@@ -37,7 +42,9 @@ export function SearchBar({ onClose }: SearchBarProps) {
           q: debouncedQuery,
           limit: 8,
         });
-        setResults(response.users);
+        const me = AuthService.getUserId();
+        const filtered = response.users.filter(u => u.id.toString() !== (me || ""));
+        setResults(filtered);
         setIsOpen(true);
         setFocusedIndex(-1);
       } catch (error) {
@@ -53,10 +60,10 @@ export function SearchBar({ onClose }: SearchBarProps) {
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (
-        searchRef.current &&
-        !searchRef.current.contains(event.target as Node)
-      ) {
+      const target = event.target as Node;
+      const inSearch = searchRef.current?.contains(target);
+      const inDropdown = dropdownRef.current?.contains(target);
+      if (!inSearch && !inDropdown) {
         setIsOpen(false);
       }
     }
@@ -66,6 +73,25 @@ export function SearchBar({ onClose }: SearchBarProps) {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+
+  // Positioning for portal dropdown
+  useEffect(() => {
+    const update = () => {
+      const el = searchRef.current;
+      if (!el || !isOpen) return;
+      const rect = el.getBoundingClientRect();
+      setDropdownPos({ left: rect.left, top: rect.bottom + 16, width: rect.width });
+    };
+    if (isOpen) {
+      update();
+      window.addEventListener("resize", update);
+      window.addEventListener("scroll", update, true);
+    }
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+    };
+  }, [isOpen, results.length]);
 
   const handleUserClick = (user: SearchUser) => {
     router.push(`/user/${user.id}`);
@@ -194,120 +220,77 @@ export function SearchBar({ onClose }: SearchBarProps) {
         </div>
       </div>
 
-      {/* Search Results */}
-      {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-4 z-[9999]">
-          <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50 rounded-2xl shadow-2xl overflow-hidden animate-in slide-in-from-top-4 fade-in duration-300">
-            {results.length > 0 ? (
-              <div className="max-h-80 overflow-y-auto">
-                {results.map((user, index) => (
-                  <button
-                    key={user.id}
-                    onClick={() => handleUserClick(user)}
-                    onMouseEnter={() => setFocusedIndex(index)}
-                    className={`w-full px-4 py-3 flex items-center space-x-3 transition-all duration-200 group ${
-                      focusedIndex === index
-                        ? "bg-blue-50 dark:bg-blue-900/20"
-                        : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                    }`}
-                  >
-                    {/* Avatar */}
-                    <div className="relative">
-                      <div className="w-12 h-12 rounded-full overflow-hidden ring-2 ring-gray-200 dark:ring-gray-700 group-hover:ring-blue-300 dark:group-hover:ring-blue-600 transition-all duration-200">
-                        {user.has_avatar ? (
-                          // eslint-disable-next-line @next/next/no-img-element
+      {/* Search Results in portal */}
+      {isOpen && dropdownPos && typeof window !== "undefined" && createPortal(
+        (
+          <div
+            ref={dropdownRef}
+            style={{ position: "fixed", left: dropdownPos.left, top: dropdownPos.top, width: dropdownPos.width, zIndex: 9999 }}
+          >
+            <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50 rounded-2xl shadow-2xl overflow-hidden animate-in slide-in-from-top-4 fade-in duration-300">
+              {results.length > 0 ? (
+                <div className="max-h-80 overflow-y-auto">
+                  {results.map((user, index) => (
+                    <button
+                      key={user.id}
+                      type="button"
+                      onMouseDown={() => handleUserClick(user)}
+                      onClick={() => handleUserClick(user)}
+                      onMouseEnter={() => setFocusedIndex(index)}
+                      className={`w-full px-4 py-3 flex items-center space-x-3 transition-all duration-200 group ${
+                        focusedIndex === index
+                          ? "bg-blue-50 dark:bg-blue-900/20"
+                          : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                      }`}
+                    >
+                      <div className="relative">
+                        <div className="w-12 h-12 rounded-full overflow-hidden ring-2 ring-gray-200 dark:ring-gray-700 group-hover:ring-blue-300 dark:group-hover:ring-blue-600 transition-all duration-200">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
-                            src={AvatarService.getAvatarUrl(user.id)}
+                            src={user.has_avatar
+                              ? AvatarService.getAvatarUrl(user.id)
+                              : `https://ui-avatars.com/api/?name=${encodeURIComponent(user.display_name || user.username || "User")}&size=200&background=3b82f6&color=fff`}
                             alt={`${user.display_name}'s avatar`}
                             className="w-full h-full object-cover"
                             onError={(e) => {
-                              // Fallback to default avatar on error
-                              const target = e.currentTarget;
-                              target.style.display = "none";
-                              if (target.nextSibling) {
-                                (
-                                  target.nextSibling as HTMLElement
-                                ).style.display = "flex";
-                              }
+                              const target = e.currentTarget as HTMLImageElement;
+                              target.onerror = null;
+                              target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.display_name || user.username || "User")}&size=200&background=3b82f6&color=fff`;
                             }}
                           />
-                        ) : null}
-                        <div
-                          className={`w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-400 to-purple-500 ${user.has_avatar ? "hidden" : ""}`}
-                          style={{ display: user.has_avatar ? "none" : "flex" }}
-                        >
-                          <svg
-                            className="w-6 h-6 text-white"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                          >
-                            <path
-                              fillRule="evenodd"
-                              d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
                         </div>
                       </div>
-                    </div>
-
-                    {/* User Info */}
-                    <div className="flex-1 text-left min-w-0">
-                      <h3 className="font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate">
-                        {user.display_name}
-                      </h3>
-                      <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
-                        @{user.username}
-                      </p>
-                    </div>
-
-                    {/* Arrow Icon */}
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                      <svg
-                        className="w-5 h-5 text-gray-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 5l7 7-7 7"
-                        />
-                      </svg>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            ) : query.length >= 2 && !isLoading ? (
-              <div className="p-6 text-center">
-                <div className="w-12 h-12 mx-auto mb-3 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
-                  <svg
-                    className="w-6 h-6 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1.5}
-                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                    />
-                  </svg>
+                      <div className="flex-1 text-left min-w-0">
+                        <h3 className="font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate">
+                          {user.display_name}
+                        </h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                          @{user.username}
+                        </p>
+                      </div>
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
+                    </button>
+                  ))}
                 </div>
-                <h3 className="font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  No users found
-                </h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Try a different search term
-                </p>
-              </div>
-            ) : null}
+              ) : query.length >= 2 && !isLoading ? (
+                <div className="p-6 text-center">
+                  <div className="w-12 h-12 mx-auto mb-3 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
+                    <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                  <h3 className="font-medium text-gray-700 dark:text-gray-300 mb-1">No users found</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Try a different search term</p>
+                </div>
+              ) : null}
+            </div>
           </div>
-        </div>
-      )}
+        ), document.body)
+      }
     </div>
   );
 }

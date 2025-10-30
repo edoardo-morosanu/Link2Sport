@@ -4,6 +4,13 @@ import { useState } from "react";
 import { useEvents } from "@/hooks/useEvents";
 import { EventWithOrganizer, EventFilters, EventType } from "@/types/event";
 import { EventService } from "@/services/event";
+import { useRouter } from "next/navigation";
+import { Modal } from "@/components/ui/Modal";
+import { Card } from "@/components/ui/primitives/Card";
+import { Badge } from "@/components/ui/primitives/Badge";
+import { Input } from "@/components/ui/primitives/Input";
+import { Select } from "@/components/ui/primitives/Select";
+import { Button } from "@/components/ui/primitives/Button";
 
 interface EventListProps {
   showFilters?: boolean;
@@ -16,12 +23,64 @@ export function EventList({
   showJoinActions = true,
   initialFilters,
 }: EventListProps) {
+  const router = useRouter();
   const [filters, setFilters] = useState<EventFilters>(initialFilters || {});
   const { events, loading, error, refreshEvents, joinEvent, leaveEvent } =
     useEvents(filters);
 
   const [joiningEventId, setJoiningEventId] = useState<string | null>(null);
   const [leavingEventId, setLeavingEventId] = useState<string | null>(null);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [advStatuses, setAdvStatuses] = useState<string[]>([]);
+  const [advStartAfter, setAdvStartAfter] = useState<string>("");
+  const [advStartBefore, setAdvStartBefore] = useState<string>("");
+  const [advMinCap, setAdvMinCap] = useState<string>("");
+  const [advMaxCap, setAdvMaxCap] = useState<string>("");
+  const [advScope, setAdvScope] = useState<"all" | "following">("all");
+
+  const openAdvanced = () => {
+    // Initialize modal fields from current filters
+    setAdvStatuses(filters.status ? filters.status.split(",").map(s => s.trim()).filter(Boolean) : []);
+    setAdvStartAfter(filters.start_after || "");
+    setAdvStartBefore(filters.start_before || "");
+    setAdvMinCap(typeof filters.min_capacity === "number" ? String(filters.min_capacity) : "");
+    setAdvMaxCap(typeof filters.max_capacity === "number" ? String(filters.max_capacity) : "");
+    setAdvScope((filters.scope as any) || "all");
+    setShowAdvanced(true);
+  };
+
+  const toggleStatus = (status: string) => {
+    setAdvStatuses(prev => prev.includes(status) ? prev.filter(s => s !== status) : [...prev, status]);
+  };
+
+  const applyAdvanced = () => {
+    const next: any = { ...filters };
+    next.status = advStatuses.length ? advStatuses.join(",") : undefined;
+    next.start_after = advStartAfter ? new Date(advStartAfter).toISOString() : undefined;
+    next.start_before = advStartBefore ? new Date(advStartBefore).toISOString() : undefined;
+    const minCap = advMinCap === "" ? undefined : Math.max(0, Math.floor(Number(advMinCap)));
+    const maxCap = advMaxCap === "" ? undefined : Math.max(0, Math.floor(Number(advMaxCap)));
+    if (typeof minCap === "number" && typeof maxCap === "number" && minCap > maxCap) {
+      // swap to maintain order
+      next.min_capacity = maxCap;
+      next.max_capacity = minCap;
+    } else {
+      next.min_capacity = minCap;
+      next.max_capacity = maxCap;
+    }
+    next.scope = advScope;
+    setFilters(next);
+    setShowAdvanced(false);
+  };
+
+  const resetAdvanced = () => {
+    setAdvStatuses([]);
+    setAdvStartAfter("");
+    setAdvStartBefore("");
+    setAdvMinCap("");
+    setAdvMaxCap("");
+    setAdvScope("all");
+  };
 
   const handleJoinEvent = async (eventId: string) => {
     try {
@@ -114,14 +173,14 @@ export function EventList({
   };
 
   const canLeaveEvent = (event: EventWithOrganizer) => {
-    return event.is_participant && !event.is_organizer;
+    return event.is_participant && !event.is_organizer && event.status !== "complete";
   };
 
   if (loading) {
     return (
       <div className="text-center py-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-        <p className="mt-2 text-gray-600 dark:text-gray-400">
+        <p className="mt-2 text-[var(--text-muted)]">
           Loading activities...
         </p>
       </div>
@@ -131,7 +190,7 @@ export function EventList({
   if (error) {
     return (
       <div className="text-center py-8">
-        <p className="text-red-600 dark:text-red-400 mb-4">{error}</p>
+        <p className="text-red-600 mb-4">{error}</p>
         <button
           onClick={refreshEvents}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
@@ -146,18 +205,20 @@ export function EventList({
     <div className="space-y-6">
       {/* Filters */}
       {showFilters && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Filter Activities
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-[var(--card-bg)] rounded-lg p-4 shadow-sm border border-[var(--border-color)]">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-[var(--text-primary)]">Filter Activities</h3>
+            <Button type="button" onClick={openAdvanced} variant="outline" size="sm">
+              Advanced Filters
+            </Button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             {/* Sport Filter */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                 Sport
               </label>
-              <input
-                type="text"
+              <Input
                 value={filters.sport || ""}
                 onChange={(e) => {
                   const newFilters = {
@@ -166,17 +227,16 @@ export function EventList({
                   };
                   setFilters(newFilters);
                 }}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
                 placeholder="e.g., Basketball"
               />
             </div>
 
             {/* Type Filter */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                 Type
               </label>
-              <select
+              <Select
                 value={filters.type || ""}
                 onChange={(e) => {
                   const newFilters = {
@@ -185,23 +245,109 @@ export function EventList({
                   };
                   setFilters(newFilters);
                 }}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
               >
                 <option value="">All Types</option>
                 <option value="game">Games</option>
                 <option value="training">Training</option>
                 <option value="event">Events</option>
-              </select>
+              </Select>
             </div>
 
-            {/* Clear Filters */}
-            <div className="flex items-end">
-              <button
-                onClick={() => setFilters({})}
-                className="w-full px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-600 rounded-md hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
-              >
-                Clear Filters
-              </button>
+            {/* Location Filter */}
+            <div>
+              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+                Location
+              </label>
+              <Input
+                value={filters.location || ""}
+                onChange={(e) => {
+                  const newFilters = {
+                    ...filters,
+                    location: e.target.value || undefined,
+                  };
+                  setFilters(newFilters);
+                }}
+                placeholder="e.g., Eindhoven"
+              />
+            </div>
+
+            {/* Radius (km) */}
+            <div>
+              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+                Radius (km)
+              </label>
+              <Input
+                type="number"
+                min={1}
+                step={1}
+                value={typeof filters.radius_km === "number" ? filters.radius_km : ""}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const num = val === "" ? undefined : Math.max(1, Math.floor(Number(val)));
+                  setFilters({
+                    ...filters,
+                    radius_km: num,
+                  });
+                }}
+                placeholder="e.g., 10"
+              />
+            </div>
+
+            {/* Geo controls */}
+            <div className="md:col-span-5 grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="sm:col-span-2 flex items-center gap-3">
+                <Button
+                  onClick={() => {
+                    if (!navigator.geolocation) {
+                      alert("Geolocation is not supported by your browser.");
+                      return;
+                    }
+                    navigator.geolocation.getCurrentPosition(
+                      (pos) => {
+                        const { latitude, longitude } = pos.coords;
+                        setFilters({
+                          ...filters,
+                          lat: latitude,
+                          lng: longitude,
+                          // If no radius selected, default to 10km for convenience
+                          radius_km: typeof filters.radius_km === "number" ? filters.radius_km : 10,
+                        });
+                      },
+                      (err) => {
+                        console.error("Geolocation error", err);
+                        alert("Could not get your location. Please allow location access.");
+                      },
+                      { enableHighAccuracy: true, timeout: 8000 }
+                    );
+                  }}
+                  variant="primary"
+                >
+                  Use my location
+                </Button>
+                {(typeof filters.lat === "number" && typeof filters.lng === "number") && (
+                  <div className="text-sm text-[var(--text-secondary)]">
+                    Using coords: {filters.lat.toFixed(4)}, {filters.lng.toFixed(4)}
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center justify-end gap-3">
+                {(typeof filters.lat === "number" || typeof filters.lng === "number" || typeof filters.radius_km === "number") && (
+                  <Button
+                    onClick={() => setFilters({
+                      ...filters,
+                      lat: undefined,
+                      lng: undefined,
+                      radius_km: undefined,
+                    })}
+                    variant="secondary"
+                  >
+                    Clear location
+                  </Button>
+                )}
+                <Button onClick={() => setFilters({})} variant="secondary">
+                  Clear All
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -210,10 +356,10 @@ export function EventList({
       {/* Events List */}
       <div className="space-y-4">
         {events.length === 0 ? (
-          <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+          <div className="text-center py-12 text-[var(--text-muted)]">
             <div className="mb-4">
               <svg
-                className="w-16 h-16 mx-auto text-gray-400"
+                className="w-16 h-16 mx-auto text-[var(--text-muted)]"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -233,50 +379,67 @@ export function EventList({
           </div>
         ) : (
           events.map((event) => (
-            <div
+            <Card
               key={event.id}
-              className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700 transition-colors duration-300"
+              padding="md"
+              className="cursor-pointer hover:shadow transition-shadow"
+              onClick={() => router.push(`/activity/${event.id}`)}
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   {/* Header with title, badges, and organizer */}
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center space-x-3">
-                      <h3 className="font-semibold text-xl text-gray-900 dark:text-white">
+                      <h3 className="font-semibold text-xl text-[var(--text-primary)]">
                         {event.title}
                       </h3>
-                      <span className="text-sm px-3 py-1 bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 rounded-full">
+                      <Badge variant="info" className="text-sm px-3 py-1">
                         {getEventTypeDisplay(event.type)}
-                      </span>
-                      <span
-                        className={`text-sm px-3 py-1 rounded-full ${getStatusBadgeColor(event.status)}`}
+                      </Badge>
+                      <Badge
+                        variant={
+                          event.status === "active"
+                            ? "success"
+                            : event.status === "upcoming"
+                              ? "info"
+                              : event.status === "cancelled"
+                                ? "warning"
+                                : "neutral"
+                        }
+                        className="text-sm px-3 py-1 capitalize"
                       >
-                        {event.status.charAt(0).toUpperCase() +
-                          event.status.slice(1)}
-                      </span>
+                        {event.status}
+                      </Badge>
                     </div>
                   </div>
 
                   {/* Organizer info */}
                   <div className="flex items-center space-x-2 mb-3">
-                    <div className="w-8 h-8 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center">
+                    <div className="w-8 h-8 bg-[var(--card-hover-bg)] rounded-full overflow-hidden flex items-center justify-center">
                       {event.organizer_avatar ? (
                         <img
                           src={event.organizer_avatar}
                           alt={event.organizer_name}
                           className="w-8 h-8 rounded-full object-cover"
+                          onError={(e) => {
+                            const target = e.currentTarget as HTMLImageElement;
+                            target.onerror = null;
+                            target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(event.organizer_username || event.organizer_name || "User")}&size=200&background=3b82f6&color=fff`;
+                          }}
                         />
                       ) : (
-                        <span className="text-xs text-gray-600 dark:text-gray-400">
-                          {event.organizer_name.charAt(0).toUpperCase()}
-                        </span>
+                        <img
+                          src={`https://ui-avatars.com/api/?name=${encodeURIComponent(event.organizer_username || event.organizer_name || "User")}&size=200&background=3b82f6&color=fff`}
+                          alt={event.organizer_name}
+                          className="w-8 h-8 rounded-full object-cover"
+                        />
                       )}
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">
+                      <p className="text-sm font-medium text-[var(--text-primary)]">
                         {event.organizer_name}
                       </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                      <p className="text-xs text-[var(--text-muted)]">
                         @{event.organizer_username}
                       </p>
                     </div>
@@ -294,13 +457,13 @@ export function EventList({
 
                   {/* Description */}
                   {event.description && (
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 leading-relaxed">
+                    <p className="text-sm text-[var(--text-secondary)] mb-4 leading-relaxed">
                       {event.description}
                     </p>
                   )}
 
                   {/* Event details */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-500 dark:text-gray-400 mb-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-[var(--text-muted)] mb-4">
                     <div className="flex items-center space-x-2">
                       <svg
                         className="w-4 h-4"
@@ -384,7 +547,7 @@ export function EventList({
                     <div className="flex space-x-2">
                       {canJoinEvent(event) && (
                         <button
-                          onClick={() => handleJoinEvent(event.id)}
+                          onClick={(e) => { e.stopPropagation(); handleJoinEvent(event.id); }}
                           disabled={joiningEventId === event.id}
                           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 disabled:opacity-50 flex items-center space-x-2"
                         >
@@ -415,7 +578,7 @@ export function EventList({
 
                       {canLeaveEvent(event) && (
                         <button
-                          onClick={() => handleLeaveEvent(event.id)}
+                          onClick={(e) => { e.stopPropagation(); handleLeaveEvent(event.id); }}
                           disabled={leavingEventId === event.id}
                           className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200 disabled:opacity-50 flex items-center space-x-2"
                         >
@@ -464,7 +627,7 @@ export function EventList({
                       )}
 
                       {event.status !== "upcoming" && (
-                        <span className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-lg">
+                        <span className="px-4 py-2 bg-[var(--card-hover-bg)] text-[var(--text-secondary)] rounded-lg">
                           {event.status === "complete"
                             ? "Completed"
                             : event.status === "active"
@@ -478,10 +641,75 @@ export function EventList({
                   )}
                 </div>
               </div>
-            </div>
+            </Card>
           ))
         )}
       </div>
+
+      {/* Advanced Filters Modal */}
+      {showAdvanced && (
+        <Modal
+          isOpen={showAdvanced}
+          onClose={() => setShowAdvanced(false)}
+          title="Advanced Filters"
+          variant="neutral"
+          size="lg"
+        >
+          <div className="p-4 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Scope */}
+              <div>
+                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Scope</label>
+                <select
+                  value={advScope}
+                  onChange={(e) => setAdvScope((e.target.value as any) || "all")}
+                  className="w-full px-3 py-2 border border-[var(--border-color)] rounded-md bg-[var(--card-hover-bg)] text-[var(--text-primary)]"
+                >
+                  <option value="all">All</option>
+                  <option value="following">Following</option>
+                </select>
+              </div>
+              {/* Status */}
+              <div>
+                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Status</label>
+                <div className="flex flex-wrap gap-2">
+                  {(["upcoming","active","complete","cancelled"] as const).map(s => (
+                    <label key={s} className="inline-flex items-center gap-2 px-2 py-1 rounded-md border border-[var(--border-color)] bg-[var(--card-hover-bg)] cursor-pointer">
+                      <input type="checkbox" checked={advStatuses.includes(s)} onChange={() => toggleStatus(s)} />
+                      <span className="capitalize text-sm text-[var(--text-primary)]">{s}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              {/* Dates */}
+              <div>
+                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Start After</label>
+                <input type="datetime-local" value={advStartAfter ? new Date(advStartAfter).toISOString().slice(0,16) : ""} onChange={(e) => setAdvStartAfter(e.target.value ? new Date(e.target.value).toISOString() : "")} className="w-full px-3 py-2 border border-[var(--border-color)] rounded-md bg-[var(--card-hover-bg)] text-[var(--text-primary)]" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Start Before</label>
+                <input type="datetime-local" value={advStartBefore ? new Date(advStartBefore).toISOString().slice(0,16) : ""} onChange={(e) => setAdvStartBefore(e.target.value ? new Date(e.target.value).toISOString() : "")} className="w-full px-3 py-2 border border-[var(--border-color)] rounded-md bg-[var(--card-hover-bg)] text-[var(--text-primary)]" />
+              </div>
+              {/* Capacity */}
+              <div>
+                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Min Capacity</label>
+                <Input type="number" min={0} step={1} value={advMinCap} onChange={(e) => setAdvMinCap(e.target.value)} placeholder="e.g., 2" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Max Capacity</label>
+                <Input type="number" min={0} step={1} value={advMaxCap} onChange={(e) => setAdvMaxCap(e.target.value)} placeholder="e.g., 10" />
+              </div>
+            </div>
+          </div>
+          <div className="px-4 py-3 border-t border-[var(--border-color)] flex items-center justify-between">
+            <Button onClick={resetAdvanced} variant="secondary">Reset</Button>
+            <div className="flex items-center gap-2">
+              <Button onClick={() => setShowAdvanced(false)} variant="secondary">Cancel</Button>
+              <Button onClick={applyAdvanced} variant="primary">Apply</Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

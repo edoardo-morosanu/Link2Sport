@@ -86,11 +86,26 @@ func (esu *EventStatusUpdater) updateUpcomingToActive(now time.Time) error {
 		log.Printf("Updated %d events from 'upcoming' to 'active'", result.RowsAffected)
 	}
 
+	// Case 2: Active events with no end_at that started more than 1 hour ago
+	cutoff := now.Add(-1 * time.Hour)
+	result2 := esu.db.Model(&models.Event{}).
+		Where("status = ? AND end_at IS NULL AND start_at <= ?", "active", cutoff).
+		Update("status", "complete")
+
+	if result2.Error != nil {
+		return result2.Error
+	}
+
+	if result2.RowsAffected > 0 {
+		log.Printf("Updated %d events without end time from 'active' to 'complete'", result2.RowsAffected)
+	}
+
 	return nil
 }
 
 // updateActiveToComplete transitions active events to complete when their end time has passed
 func (esu *EventStatusUpdater) updateActiveToComplete(now time.Time) error {
+	// Case 1: Active events with end_at in the past
 	result := esu.db.Model(&models.Event{}).
 		Where("status = ? AND end_at IS NOT NULL AND end_at <= ?", "active", now).
 		Update("status", "complete")
@@ -124,6 +139,14 @@ func (esu *EventStatusUpdater) GetEventsNeedingStatusUpdate() ([]models.Event, e
 		return nil, err
 	}
 	events = append(events, activeEvents...)
+
+	// Find active events with no end_at that started more than 1 hour ago
+	cutoff := now.Add(-1 * time.Hour)
+	var activeNoEnd []models.Event
+	if err := esu.db.Where("status = ? AND end_at IS NULL AND start_at <= ?", "active", cutoff).Find(&activeNoEnd).Error; err != nil {
+		return nil, err
+	}
+	events = append(events, activeNoEnd...)
 
 	return events, nil
 }

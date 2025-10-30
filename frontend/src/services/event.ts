@@ -92,13 +92,19 @@ export class EventService {
   }
 
   private static mapEventWithOrganizerResponse(event: any): EventWithOrganizer {
+    const rawOrgAvatar: string | undefined =
+      event.organizer_avatar || event.organizer_avatar_url || event.avatar_url;
+    const organizer_avatar = rawOrgAvatar
+      ? (rawOrgAvatar.startsWith("http") || rawOrgAvatar.startsWith("data:")
+          ? rawOrgAvatar
+          : `${API_BASE_URL}${rawOrgAvatar}`)
+      : undefined;
+
     return {
       ...this.mapEventResponse(event),
       organizer_name: event.organizer_name || "",
       organizer_username: event.organizer_username || "",
-      organizer_avatar: event.organizer_avatar
-        ? `${API_BASE_URL}${event.organizer_avatar}`
-        : undefined,
+      organizer_avatar,
       is_organizer: event.is_organizer || false,
       is_participant: event.is_participant || false,
     };
@@ -125,9 +131,19 @@ export class EventService {
 
     if (filters?.sport) queryParams.append("sport", filters.sport);
     if (filters?.type) queryParams.append("type", filters.type);
+    if (filters?.location) queryParams.append("location", filters.location);
+    if (filters?.scope) queryParams.append("scope", filters.scope);
+    if (filters?.status) queryParams.append("status", filters.status);
+    if (filters?.start_after) queryParams.append("start_after", filters.start_after);
+    if (filters?.start_before) queryParams.append("start_before", filters.start_before);
+    if (typeof filters?.min_capacity === "number") queryParams.append("min_capacity", filters.min_capacity.toString());
+    if (typeof filters?.max_capacity === "number") queryParams.append("max_capacity", filters.max_capacity.toString());
     if (filters?.limit) queryParams.append("limit", filters.limit.toString());
     if (filters?.offset)
       queryParams.append("offset", filters.offset.toString());
+    if (typeof filters?.lat === "number") queryParams.append("lat", filters.lat.toString());
+    if (typeof filters?.lng === "number") queryParams.append("lng", filters.lng.toString());
+    if (typeof filters?.radius_km === "number") queryParams.append("radius_km", filters.radius_km.toString());
 
     const url = `${API_BASE_URL}/api/events/${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
 
@@ -158,6 +174,21 @@ export class EventService {
       return [];
     }
     return response.map((event: any) => this.mapEventResponse(event));
+  }
+
+  // Get events by organizer (user) ID (includes organizer + participation flags)
+  static async getUserEventsById(userId: string | number): Promise<EventWithOrganizer[]> {
+    const response = await this.makeAuthenticatedRequest(
+      `${API_BASE_URL}/api/events/user/${userId}`,
+      {
+        method: "GET",
+      },
+    );
+
+    if (!response || !Array.isArray(response)) {
+      return [];
+    }
+    return response.map((event: any) => this.mapEventWithOrganizerResponse(event));
   }
 
   // Get specific event by ID
@@ -234,18 +265,29 @@ export class EventService {
       return [];
     }
 
-    return response.map((participant: any) => ({
-      id: participant.id?.toString() || "",
-      event_id: participant.event_id?.toString() || "",
-      user_id: participant.user_id?.toString() || "",
-      role: participant.role || "",
-      joined_at: new Date(participant.joined_at),
-      username: participant.User?.username || "",
-      name: participant.User?.display_name || participant.User?.username || "",
-      avatar: participant.User?.avatar_url
-        ? `${API_BASE_URL}${participant.User.avatar_url}`
-        : undefined,
-    }));
+    return response.map((participant: any) => {
+      const user = participant.User || participant.user || {};
+      const username = participant.username || user.username || "";
+      const displayName =
+        participant.name || user.display_name || user.username || username || "";
+      const avatarPath: string | undefined =
+        participant.avatar || participant.avatar_url || user.avatar_url;
+      const avatar = avatarPath
+        ? (avatarPath.startsWith("http") || avatarPath.startsWith("data:")
+            ? avatarPath
+            : `${API_BASE_URL}${avatarPath}`)
+        : undefined;
+      return {
+        id: participant.id?.toString() || "",
+        event_id: participant.event_id?.toString() || "",
+        user_id: participant.user_id?.toString() || "",
+        role: participant.role || "",
+        joined_at: new Date(participant.joined_at),
+        username,
+        name: displayName,
+        avatar,
+      } as EventParticipant;
+    });
   }
 
   // Force update event statuses

@@ -98,7 +98,7 @@ export function DateTimePicker({
   return (
     <div className="space-y-3">
       {label && (
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+        <label className="block text-sm font-medium text-[var(--text-secondary)]">
           {label}
         </label>
       )}
@@ -112,7 +112,7 @@ export function DateTimePicker({
             onChange={(e) => handleDateChange(e.target.value)}
             disabled={disabled}
             max={formatMaxDate}
-            className={`w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white ${className}`}
+            className={`w-full px-4 py-3 border border-[var(--border-color)] rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--card-hover-bg)] text-[var(--text-primary)] ${className}`}
           />
         </div>
 
@@ -142,7 +142,7 @@ export function DateTimePicker({
             type="button"
             onClick={clearDateTime}
             disabled={disabled}
-            className="px-3 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="px-3 py-1 text-xs bg-[var(--card-hover-bg)] text-[var(--text-secondary)] border border-[var(--border-color)] rounded-lg hover:bg-[var(--card-bg)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             Clear
           </button>
