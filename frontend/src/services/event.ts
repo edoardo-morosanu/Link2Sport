@@ -131,9 +131,19 @@ export class EventService {
 
     if (filters?.sport) queryParams.append("sport", filters.sport);
     if (filters?.type) queryParams.append("type", filters.type);
+    if (filters?.location) queryParams.append("location", filters.location);
+    if (filters?.scope) queryParams.append("scope", filters.scope);
+    if (filters?.status) queryParams.append("status", filters.status);
+    if (filters?.start_after) queryParams.append("start_after", filters.start_after);
+    if (filters?.start_before) queryParams.append("start_before", filters.start_before);
+    if (typeof filters?.min_capacity === "number") queryParams.append("min_capacity", filters.min_capacity.toString());
+    if (typeof filters?.max_capacity === "number") queryParams.append("max_capacity", filters.max_capacity.toString());
     if (filters?.limit) queryParams.append("limit", filters.limit.toString());
     if (filters?.offset)
       queryParams.append("offset", filters.offset.toString());
+    if (typeof filters?.lat === "number") queryParams.append("lat", filters.lat.toString());
+    if (typeof filters?.lng === "number") queryParams.append("lng", filters.lng.toString());
+    if (typeof filters?.radius_km === "number") queryParams.append("radius_km", filters.radius_km.toString());
 
     const url = `${API_BASE_URL}/api/events/${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
 
@@ -166,8 +176,8 @@ export class EventService {
     return response.map((event: any) => this.mapEventResponse(event));
   }
 
-  // Get events by organizer (user) ID
-  static async getUserEventsById(userId: string | number): Promise<Event[]> {
+  // Get events by organizer (user) ID (includes organizer + participation flags)
+  static async getUserEventsById(userId: string | number): Promise<EventWithOrganizer[]> {
     const response = await this.makeAuthenticatedRequest(
       `${API_BASE_URL}/api/events/user/${userId}`,
       {
@@ -178,7 +188,7 @@ export class EventService {
     if (!response || !Array.isArray(response)) {
       return [];
     }
-    return response.map((event: any) => this.mapEventResponse(event));
+    return response.map((event: any) => this.mapEventWithOrganizerResponse(event));
   }
 
   // Get specific event by ID

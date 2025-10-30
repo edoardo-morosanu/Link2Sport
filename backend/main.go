@@ -74,7 +74,7 @@ func main() {
 	defer config.CloseDatabase()
 
 	// Run database migrations
-	if err := config.AutoMigrate(&models.User{}, &models.Follow{}, &models.Event{}, &models.EventParticipant{}, &models.Sport{}, &models.Post{}, &models.PostMention{}, &models.PostLike{}); err != nil {
+	if err := config.AutoMigrate(&models.User{}, &models.Follow{}, &models.Event{}, &models.EventParticipant{}, &models.Sport{}, &models.Post{}, &models.PostMention{}, &models.PostLike{}, &models.Comment{}, &models.Notification{}); err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}
 
@@ -88,7 +88,7 @@ func main() {
 	// Configure CORS
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:3000", "http://127.0.0.1:3000"},
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
@@ -113,6 +113,7 @@ func main() {
 	eventController := controllers.NewEventController()
 	sportController := controllers.NewSportController()
 	postController := controllers.NewPostController()
+	notificationController := controllers.NewNotificationController()
 
 	// Setup routes
 	routes.SetupAuthRoutes(r, authController)
@@ -123,6 +124,7 @@ func main() {
 	routes.SetupEventRoutes(r, eventController)
 	routes.SetupSportRoutes(r, sportController)
 	routes.SetupPostRoutes(r, postController)
+	routes.SetupNotificationRoutes(r, notificationController)
 
 	// Debug: log registered post routes
 	for _, ri := range r.Routes() {

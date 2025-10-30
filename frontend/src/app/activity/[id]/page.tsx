@@ -6,7 +6,16 @@ import { EventService } from "@/services/event";
 import type { EventWithOrganizer } from "@/types/event";
 import { EditEventModal } from "@/components/events/EditEventModal";
 import type { UpdateEventData } from "@/types/event";
+import { Button } from "@/components/ui/primitives/Button";
+import { Card } from "@/components/ui/primitives/Card";
+import { PageHeader } from "@/components/ui/primitives/PageHeader";
+import { AppShell } from "@/components/layout/AppShell";
 import type { EventParticipant } from "@/types/event";
+import { ActivityCommentService } from "@/services/activityComment";
+import type { CommentNode } from "@/types/comment";
+import { AvatarService } from "@/services/avatar";
+import { AuthService } from "@/services/auth";
+import { CommentThread } from "@/components/comments/CommentThread";
 import {
   CalendarIcon,
   ClockIcon,
@@ -29,6 +38,13 @@ export default function ActivityDetailPage() {
   const [participants, setParticipants] = useState<EventParticipant[]>([]);
   const [participantsLoading, setParticipantsLoading] = useState(false);
   const [participantsError, setParticipantsError] = useState<string | null>(null);
+  const [joinBusy, setJoinBusy] = useState(false);
+  const [joinErr, setJoinErr] = useState<string | null>(null);
+  const [comments, setComments] = useState<CommentNode[]>([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [commentsError, setCommentsError] = useState<string | null>(null);
+  const [newComment, setNewComment] = useState("");
+  const [commentsEnabled, setCommentsEnabled] = useState(true);
 
   useEffect(() => {
     async function fetchEvent() {
@@ -46,6 +62,43 @@ export default function ActivityDetailPage() {
     fetchEvent();
   }, [eventId]);
 
+  useEffect(() => {
+    async function fetchComments() {
+      if (!eventId) return;
+      try {
+        setCommentsLoading(true);
+        setCommentsError(null);
+        const list = await ActivityCommentService.getByActivity(eventId);
+        setComments(list);
+      } catch (err: any) {
+        if (err?.status === 404) {
+          // Comments not enabled on backend; show empty state without error
+          setComments([]);
+          setCommentsEnabled(false);
+        } else {
+          setCommentsError(err instanceof Error ? err.message : "Failed to load comments");
+        }
+      } finally {
+        setCommentsLoading(false);
+      }
+    }
+    fetchComments();
+  }, [eventId]);
+
+  const reloadComments = async () => {
+    if (!eventId) return;
+    try {
+      setCommentsLoading(true);
+      setCommentsError(null);
+      const list = await ActivityCommentService.getByActivity(eventId);
+      setComments(list);
+    } catch (err) {
+      setCommentsError(err instanceof Error ? err.message : "Failed to load comments");
+    } finally {
+      setCommentsLoading(false);
+    }
+  };
+
   const refresh = async () => {
     if (!eventId) return;
     try {
@@ -56,6 +109,34 @@ export default function ActivityDetailPage() {
       setError(err instanceof Error ? err.message : "Failed to load activity");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleJoin = async () => {
+    if (!eventId) return;
+    try {
+      setJoinBusy(true);
+      setJoinErr(null);
+      await EventService.joinEvent(eventId);
+      await refresh();
+    } catch (err) {
+      setJoinErr(err instanceof Error ? err.message : "Failed to join activity");
+    } finally {
+      setJoinBusy(false);
+    }
+  };
+
+  const handleLeave = async () => {
+    if (!eventId) return;
+    try {
+      setJoinBusy(true);
+      setJoinErr(null);
+      await EventService.leaveEvent(eventId);
+      await refresh();
+    } catch (err) {
+      setJoinErr(err instanceof Error ? err.message : "Failed to leave activity");
+    } finally {
+      setJoinBusy(false);
     }
   };
 
@@ -134,16 +215,16 @@ export default function ActivityDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="text-gray-600 dark:text-gray-400">Loading activity…</div>
+      <div className="min-h-screen bg-[var(--background)] flex items-center justify-center">
+        <div className="text-[var(--text-muted)]">Loading activity…</div>
       </div>
     );
   }
 
   if (error || !event) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="text-gray-600 dark:text-gray-400">{error || "Activity not found"}</div>
+      <div className="min-h-screen bg-[var(--background)] flex items-center justify-center">
+        <div className="text-[var(--text-muted)]">{error || "Activity not found"}</div>
       </div>
     );
   }
@@ -151,12 +232,18 @@ export default function ActivityDetailPage() {
   const formatDate = (d?: Date) => (d ? new Date(d).toLocaleString() : "");
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-5xl mx-auto p-4">
+    <div className="min-h-screen bg-[var(--background)] pb-24 md:pb-0">
+      <AppShell>
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
           {/* Left column: Activity content */}
           <div className="lg:col-span-7 space-y-4">
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+            <Card padding="md">
+              <div className="mb-2">
+                <PageHeader
+                  title={event.title}
+                  subtitle={[event.sport, event.location_name].filter(Boolean).join(" • ")}
+                />
+              </div>
               <div className="flex items-start justify-between">
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center overflow-hidden">
@@ -180,38 +267,62 @@ export default function ActivityDetailPage() {
                     )}
                   </div>
                   <div>
-                    <div className="font-semibold text-gray-900 dark:text-white">{event.organizer_name || "Organizer"}</div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">@{event.organizer_username || "user"}</div>
+                    <div className="font-semibold text-[var(--text-primary)]">{event.organizer_name || "Organizer"}</div>
+                    <div className="text-sm text-[var(--text-muted)]">@{event.organizer_username || "user"}</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="px-2 py-0.5 text-xs rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 capitalize">{event.type}</span>
-                  <span className="px-2 py-0.5 text-xs rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 capitalize">{event.status}</span>
+                  <span className="px-2 py-0.5 text-xs rounded-full bg-[var(--card-hover-bg)] text-[var(--text-secondary)] capitalize">{event.status}</span>
                   {event.is_organizer && (
-                    <div className="flex items-center gap-2 ml-2">
-                      <button
+                    <div className="hidden sm:flex items-center gap-2 ml-2">
+                      <Button
                         onClick={() => setIsEditOpen(true)}
-                        className="px-3 py-1 text-xs rounded-md border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+                        variant="outline"
+                        size="sm"
                       >
                         Edit
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         onClick={handleDelete}
-                        className="px-3 py-1 text-xs rounded-md border border-red-300 dark:border-red-600 text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/30"
+                        variant="danger"
+                        size="sm"
                       >
                         Delete
-                      </button>
+                      </Button>
+                    </div>
+                  )}
+                  {!event.is_organizer && event.status === "upcoming" && (
+                    <div className="hidden sm:flex items-center gap-2 ml-2">
+                      {event.is_participant ? (
+                        <Button
+                          onClick={handleLeave}
+                          disabled={joinBusy}
+                          variant="outline"
+                          size="sm"
+                        >
+                          {joinBusy ? "Leaving..." : "Leave"}
+                        </Button>
+                      ) : (
+                        <Button
+                          onClick={handleJoin}
+                          disabled={joinBusy}
+                          variant="primary"
+                          size="sm"
+                        >
+                          {joinBusy ? "Joining..." : "Join"}
+                        </Button>
+                      )}
                     </div>
                   )}
                 </div>
               </div>
 
-              <h1 className="mt-3 text-xl font-bold text-gray-900 dark:text-white">{event.title}</h1>
               {event.description && (
-                <p className="mt-2 text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{event.description}</p>
+                <p className="mt-2 text-[var(--text-secondary)] whitespace-pre-wrap">{event.description}</p>
               )}
 
-              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-gray-700 dark:text-gray-300">
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-[var(--text-secondary)]">
                 <div className="flex items-center gap-2"><CalendarIcon className="w-5 h-5 flex-none" strokeWidth={2} /><span>{formatDate(event.start_at)}</span></div>
                 {event.end_at && (<div className="flex items-center gap-2"><ClockIcon className="w-5 h-5 flex-none" strokeWidth={2} /><span>{formatDate(event.end_at)}</span></div>)}
                 <div className="flex items-center gap-2"><TrophyIcon className="w-5 h-5 flex-none" strokeWidth={2} /><span>{event.sport}</span></div>
@@ -221,24 +332,109 @@ export default function ActivityDetailPage() {
                   <span>{event.participants}{event.capacity ? `/${event.capacity}` : ""} participants</span>
                 </button>
               </div>
-            </div>
+              {joinErr && (
+                <div className="mt-2 text-sm text-red-600">{joinErr}</div>
+              )}
+            </Card>
 
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-              <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Comments</h2>
+            <Card padding="none">
+              <div className="p-4 border-b border-[var(--border-color)]">
+                <PageHeader title="Comments" />
               </div>
-              <div className="p-4 text-gray-600 dark:text-gray-400">Coming soon…</div>
-            </div>
+              <div className="p-4">
+                {/* New comment composer */}
+                <div className="flex gap-2 mb-4">
+                  <div className="w-8 h-8 rounded-full overflow-hidden bg-[var(--card-hover-bg)] flex-none">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={AvatarService.getAvatarUrl(AuthService.getUserId() || "0")}
+                      alt="me"
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        const target = e.currentTarget as HTMLImageElement;
+                        target.onerror = null;
+                        target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent("You")}&size=200&background=10b981&color=fff`;
+                      }}
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex gap-2">
+                      <input
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        placeholder={commentsEnabled ? "Write a comment" : "Comments are not available for this activity"}
+                        disabled={!commentsEnabled}
+                        className="flex-1 px-3 py-2 rounded-lg border border-[var(--border-color)] bg-[var(--card-hover-bg)] text-[var(--text-primary)] disabled:opacity-60"
+                      />
+                      <button
+                        onClick={async () => {
+                          if (!eventId || !newComment.trim() || !commentsEnabled) return;
+                          const text = newComment.trim();
+                          setNewComment("");
+                          try {
+                            await ActivityCommentService.create(eventId, { body: text });
+                            await reloadComments();
+                          } catch (err: any) {
+                            if (err?.status === 404) {
+                              setCommentsEnabled(false);
+                              setCommentsError("Comments are not enabled for this activity");
+                            } else {
+                              setCommentsError(err instanceof Error ? err.message : "Failed to post comment");
+                            }
+                          }
+                        }}
+                        className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
+                        disabled={!commentsEnabled}
+                      >
+                        Post
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Comments list */}
+                {commentsError && (
+                  <div className="mb-3 text-sm text-red-600">{commentsError}</div>
+                )}
+                {commentsLoading ? (
+                  <div className="text-[var(--text-muted)]">Loading…</div>
+                ) : comments.length === 0 ? (
+                  <div className="text-[var(--text-muted)]">No comments yet</div>
+                ) : (
+                  <CommentThread
+                    comments={comments}
+                    currentUserId={AuthService.getUserId()}
+                    onCreate={async (text, parentId) => {
+                      if (!eventId) return;
+                      try {
+                        await ActivityCommentService.create(eventId, { body: text, parent_id: parentId });
+                        await reloadComments();
+                      } catch (err) {
+                        setCommentsError(err instanceof Error ? err.message : "Failed to post comment");
+                      }
+                    }}
+                    onDelete={async (commentId) => {
+                      if (!eventId) return;
+                      try {
+                        await ActivityCommentService.delete(eventId, commentId);
+                        await reloadComments();
+                      } catch (err) {
+                        setCommentsError(err instanceof Error ? err.message : "Failed to delete comment");
+                      }
+                    }}
+                  />
+                )}
+              </div>
+            </Card>
           </div>
 
           {/* Right column: Map (sticky) */}
           <div className="lg:col-span-5">
             {typeof event.latitude === "number" && typeof event.longitude === "number" && (
               <div className="lg:sticky lg:top-4">
-                <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-                  <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Location</h2>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">{event.location_name}</p>
+                <Card padding="none" className="overflow-hidden">
+                  <div className="p-4 border-b border-[var(--border-color)]">
+                    <PageHeader title="Location" subtitle={event.location_name} />
                   </div>
                   <div className="h-72 w-full">
                     {(() => {
@@ -251,45 +447,45 @@ export default function ActivityDetailPage() {
                       return (
                         <div className="w-full h-full relative">
                           <iframe title="Activity location map" src={src} className="w-full h-full" style={{ border: 0 }} loading="lazy" referrerPolicy="no-referrer-when-downgrade" />
-                          <div className="p-2 text-right text-xs text-gray-500 dark:text-gray-400">
+                          <div className="p-2 text-right text-xs text-[var(--text-muted)]">
                             <a href={link} target="_blank" rel="noopener noreferrer" className="underline">OpenStreetMap</a>
                           </div>
                         </div>
                       );
                     })()}
                   </div>
-                </div>
+                </Card>
               </div>
             )}
           </div>
         </div>
-      </div>
+      </AppShell>
       {event?.is_organizer && (
         <EditEventModal
           isOpen={isEditOpen}
-          event={event}
+          event={event!}
           onClose={() => setIsEditOpen(false)}
           onSave={handleUpdate}
         />
       )}
       {isParticipantsOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={() => setIsParticipantsOpen(false)}>
-          <div className="relative w-full max-w-md rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-2xl bg-white dark:bg-gray-800" onClick={(e) => e.stopPropagation()}>
-            <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Participants</h3>
-              <button className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700" onClick={() => setIsParticipantsOpen(false)} aria-label="Close">
-                <XMarkIcon className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+          <div className="relative w-full max-w-md rounded-xl overflow-hidden border border-[var(--border-color)] shadow-2xl bg-[var(--card-bg)]" onClick={(e) => e.stopPropagation()}>
+            <div className="px-4 py-3 border-b border-[var(--border-color)] flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-[var(--text-primary)]">Participants</h3>
+              <button className="p-1 rounded hover:bg-[var(--card-hover-bg)]" onClick={() => setIsParticipantsOpen(false)} aria-label="Close">
+                <XMarkIcon className="w-5 h-5 text-[var(--text-muted)]" />
               </button>
             </div>
             <div className="max-h-[60vh] overflow-y-auto">
               {participantsLoading ? (
-                <div className="p-6 text-center text-gray-600 dark:text-gray-400">Loading…</div>
+                <div className="p-6 text-center text-[var(--text-muted)]">Loading…</div>
               ) : participantsError ? (
-                <div className="p-6 text-center text-red-600 dark:text-red-400">{participantsError}</div>
+                <div className="p-6 text-center text-red-600">{participantsError}</div>
               ) : participants.length === 0 ? (
-                <div className="p-6 text-center text-gray-600 dark:text-gray-400">No participants yet</div>
+                <div className="p-6 text-center text-[var(--text-muted)]">No participants yet</div>
               ) : (
-                <ul className="divide-y divide-gray-200 dark:divide-gray-700">
+                <ul className="divide-y divide-[var(--border-color)]">
                   {participants.map((p) => (
                     <li key={p.id} className="flex items-center gap-3 px-4 py-3">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -306,10 +502,10 @@ export default function ActivityDetailPage() {
                         }}
                       />
                       <div className="flex-1">
-                        <div className="text-sm font-medium text-gray-900 dark:text-white">{p.name}</div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">@{p.username || "unknown"} • {new Date(p.joined_at).toLocaleString()}</div>
+                        <div className="text-sm font-medium text-[var(--text-primary)]">{p.name}</div>
+                        <div className="text-xs text-[var(--text-muted)]">@{p.username || "unknown"} • {new Date(p.joined_at).toLocaleString()}</div>
                       </div>
-                      <span className="text-xs px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">{p.role || "participant"}</span>
+                      <span className="text-xs px-2 py-1 rounded-full bg-[var(--card-hover-bg)] text-[var(--text-secondary)]">{p.role || "participant"}</span>
                     </li>
                   ))}
                 </ul>
@@ -318,6 +514,32 @@ export default function ActivityDetailPage() {
           </div>
         </div>
       )}
+      {/* Mobile Join/Leave FAB above bottom nav */}
+      <div className="sm:hidden fixed right-4 bottom-24 z-40">
+        {event && event.status === "upcoming" && !event.is_organizer && (
+          event.is_participant ? (
+            <Button
+              onClick={handleLeave}
+              disabled={joinBusy}
+              variant="outline"
+              size="lg"
+              className="rounded-full shadow-md"
+            >
+              {joinBusy ? "Leaving..." : "Leave"}
+            </Button>
+          ) : (
+            <Button
+              onClick={handleJoin}
+              disabled={joinBusy}
+              variant="primary"
+              size="lg"
+              className="rounded-full shadow-md"
+            >
+              {joinBusy ? "Joining..." : "Join Activity"}
+            </Button>
+          )
+        )}
+      </div>
     </div>
   );
 }

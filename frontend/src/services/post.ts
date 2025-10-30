@@ -87,9 +87,9 @@ export class PostService {
     return data?.image_url ? `${API_BASE_URL}${data.image_url}` : `${API_BASE_URL}/api/posts/${postId}/image`;
   }
 
-  static async getPosts(limit = 20, offset = 0): Promise<Post[]> {
+  static async getPosts(limit = 20, offset = 0, scope: "all" | "following" = "all"): Promise<Post[]> {
     const response = await this.makeRequest(
-      `${API_BASE_URL}/api/posts/?limit=${limit}&offset=${offset}`,
+      `${API_BASE_URL}/api/posts/?limit=${limit}&offset=${offset}&scope=${encodeURIComponent(scope)}`,
       { method: "GET" },
     );
     if (!Array.isArray(response)) return [];

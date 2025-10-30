@@ -95,7 +95,7 @@ export function MapTilerLocationPicker({
     lng: number;
   } | null>(null);
 
-  const debounceRef = useRef<NodeJS.Timeout>();
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<MapLibreMap | null>(null);
   const markerRef = useRef<MapLibreMarker | null>(null);
@@ -244,7 +244,23 @@ export function MapTilerLocationPicker({
         console.log("Error removing map:", error);
       }
     };
-  }, [showMap, apiKey, userLocation, value, disabled]);
+  }, [showMap, apiKey, userLocation]);
+
+  // When value changes, update marker and center without reinitializing the map
+  useEffect(() => {
+    if (!showMap || !mapInstanceRef.current || !value) return;
+    try {
+      const map = mapInstanceRef.current;
+      const gl = (window as any).maplibregl;
+      if (gl) {
+        addMarker(gl, map, value.latitude, value.longitude, value.name);
+        map.flyTo({ center: [value.longitude, value.latitude], zoom: 14 });
+      }
+      setQuery(value.name || "");
+    } catch (e) {
+      // noop
+    }
+  }, [value, showMap]);
 
   const addMarker = (
     maplibregl: any,
@@ -653,14 +669,14 @@ export function MapTilerLocationPicker({
               onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
               placeholder={placeholder}
               disabled={disabled}
-              className="w-full px-4 py-3 bg-gray-50/70 dark:bg-gray-700/30 backdrop-blur-sm border-2 border-gray-200/50 dark:border-gray-600/30 text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:border-gray-300/60 dark:hover:border-gray-500/40 hover:bg-gray-50/90 dark:hover:bg-gray-700/40 placeholder-gray-500 dark:placeholder-gray-400 pr-10"
+              className="w-full px-4 py-3 bg-[var(--card-hover-bg)] backdrop-blur-sm border-2 border-[var(--border-color)] text-[var(--text-primary)] rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[var(--card-bg)] placeholder-gray-500 pr-10"
             />
 
             {/* Search Icon */}
             <div className="absolute inset-y-0 right-0 flex items-center pr-3">
               {isLoading ? (
                 <svg
-                  className="animate-spin h-5 w-5 text-gray-400"
+                  className="animate-spin h-5 w-5 text-[var(--text-muted)]"
                   fill="none"
                   viewBox="0 0 24 24"
                 >
@@ -680,7 +696,7 @@ export function MapTilerLocationPicker({
                 </svg>
               ) : (
                 <svg
-                  className="h-5 w-5 text-gray-400"
+                  className="h-5 w-5 text-[var(--text-muted)]"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -751,7 +767,7 @@ export function MapTilerLocationPicker({
 
         {/* Suggestions Dropdown */}
         {showSuggestions && suggestions.length > 0 && (
-          <div className="absolute z-50 w-full mt-1 bg-white/95 dark:bg-gray-800/95 backdrop-blur-lg rounded-xl border border-gray-200/50 dark:border-gray-700/50 shadow-lg max-h-60 overflow-auto">
+          <div className="absolute z-50 w-full mt-1 bg-[var(--card-bg)] backdrop-blur-lg rounded-xl border border-[var(--border-color)] shadow-lg max-h-60 overflow-auto">
             {suggestions.map((suggestion, index) => {
               const { main, detail } = formatSuggestionText(suggestion);
               return (
@@ -759,15 +775,15 @@ export function MapTilerLocationPicker({
                   key={suggestion.id}
                   type="button"
                   onClick={() => handleSuggestionClick(suggestion)}
-                  className={`w-full px-4 py-3 text-left hover:bg-gray-50/80 dark:hover:bg-gray-700/50 transition-colors duration-150 border-b border-gray-100/50 dark:border-gray-600/30 last:border-b-0 ${
+                  className={`w-full px-4 py-3 text-left hover:bg-[var(--card-hover-bg)] transition-colors duration-150 border-b border-[var(--border-color)] last:border-b-0 ${
                     index === selectedIndex
-                      ? "bg-blue-50/80 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
-                      : "text-gray-900 dark:text-white"
+                      ? "bg-blue-50 text-blue-700"
+                      : "text-[var(--text-primary)]"
                   }`}
                 >
                   <div className="flex items-start space-x-3">
                     <svg
-                      className="w-5 h-5 mt-0.5 text-gray-400 flex-shrink-0"
+                      className="w-5 h-5 mt-0.5 text-[var(--text-muted)] flex-shrink-0"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -788,19 +804,19 @@ export function MapTilerLocationPicker({
                     <div className="flex-1 min-w-0">
                       <div className="font-medium text-sm truncate">{main}</div>
                       {detail && (
-                        <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                        <div className="text-xs text-[var(--text-muted)] truncate">
                           {detail}
                         </div>
                       )}
                       <div className="flex items-center justify-between mt-1">
                         {apiKey && suggestion.relevance && (
-                          <div className="text-xs text-green-600 dark:text-green-400">
+                          <div className="text-xs text-green-600">
                             {Math.round(suggestion.relevance * 100)}% match
                           </div>
                         )}
                         {suggestion.properties?.categories &&
                           suggestion.properties.categories.length > 0 && (
-                            <div className="text-xs text-blue-600 dark:text-blue-400">
+                            <div className="text-xs text-blue-600">
                               {suggestion.properties.categories[0]}
                             </div>
                           )}
@@ -816,7 +832,7 @@ export function MapTilerLocationPicker({
 
       {/* Interactive Map */}
       {showMap && (
-        <div className="relative rounded-xl overflow-hidden border-2 border-gray-200/50 dark:border-gray-600/30 bg-gray-100 dark:bg-gray-800">
+        <div className="relative rounded-xl overflow-hidden border-2 border-[var(--border-color)] bg-[var(--card-bg)]">
           <div
             ref={mapRef}
             style={{ height: mapHeight }}
@@ -825,7 +841,7 @@ export function MapTilerLocationPicker({
 
           {/* Loading Overlay */}
           {!mapLoaded && (
-            <div className="absolute inset-0 bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+            <div className="absolute inset-0 bg-[var(--card-bg)] flex items-center justify-center">
               <div className="text-center space-y-3">
                 <svg
                   className="animate-spin h-8 w-8 text-blue-500 mx-auto"
@@ -846,7 +862,7 @@ export function MapTilerLocationPicker({
                     d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                   />
                 </svg>
-                <p className="text-gray-600 dark:text-gray-400 text-sm">
+                <p className="text-[var(--text-muted)] text-sm">
                   Loading map...
                 </p>
               </div>
@@ -856,8 +872,8 @@ export function MapTilerLocationPicker({
           {/* Map Instructions */}
           {mapLoaded && !disabled && (
             <div className="absolute bottom-3 left-3 right-3">
-              <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-lg p-3 border border-gray-200/50 dark:border-gray-700/50 shadow-sm">
-                <p className="text-xs text-gray-600 dark:text-gray-400 text-center">
+              <div className="bg-[var(--card-bg)] backdrop-blur-sm rounded-lg p-3 border border-[var(--border-color)] shadow-sm">
+                <p className="text-xs text-[var(--text-muted)] text-center">
                   Click anywhere on the map to select a location • Use the
                   search box or GPS button for quick access
                 </p>

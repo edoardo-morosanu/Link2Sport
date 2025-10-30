@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: white;
+  background: var(--card-bg);
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   overflow: hidden;
@@ -13,15 +13,15 @@
   justify-content: space-between;
   align-items: center;
   padding: 16px 20px;
-  border-bottom: 1px solid #e5e7eb;
-  background: #f9fafb;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--card-hover-bg);
 }
 
 .header h3 {
   margin: 0;
   font-size: 18px;
   font-weight: 600;
-  color: #111827;
+  color: var(--text-primary);
 }
 
 .refreshButton {
@@ -30,18 +30,18 @@
   gap: 6px;
   padding: 6px 12px;
   background: transparent;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--border-color);
   border-radius: 6px;
-  color: #6b7280;
+  color: var(--text-secondary);
   font-size: 13px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .refreshButton:hover:not(:disabled) {
-  background: #f3f4f6;
-  border-color: #9ca3af;
-  color: #374151;
+  background: var(--card-hover-bg);
+  border-color: var(--border-color);
+  color: var(--text-primary);
 }
 
 .refreshButton:disabled {
@@ -64,7 +64,7 @@
   align-items: center;
   justify-content: center;
   padding: 40px 20px;
-  color: #6b7280;
+  color: var(--text-secondary);
 }
 
 .loading p {
@@ -90,7 +90,7 @@
 .errorMessage {
   margin: 0;
   font-size: 13px;
-  color: #9ca3af;
+  color: var(--text-muted);
 }
 
 .emptyState {
@@ -100,7 +100,7 @@
   justify-content: center;
   padding: 60px 20px;
   text-align: center;
-  color: #6b7280;
+  color: var(--text-secondary);
 }
 
 .emptyIcon {
@@ -113,7 +113,7 @@
   margin: 0 0 8px 0;
   font-size: 16px;
   font-weight: 600;
-  color: #374151;
+  color: var(--text-primary);
 }
 
 .emptyState p {
@@ -138,12 +138,12 @@
   align-items: center;
   justify-content: space-between;
   padding: 12px 20px;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid var(--border-color);
   transition: background-color 0.2s ease;
 }
 
 .item:hover {
-  background: #f9fafb;
+  background: var(--card-hover-bg);
 }
 
 .item:last-child {
@@ -177,7 +177,7 @@
   height: 100%;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid #e5e7eb;
+  border: 2px solid var(--border-color);
 }
 
 .avatarPlaceholder {
@@ -203,7 +203,7 @@
   margin: 0 0 2px 0;
   font-size: 15px;
   font-weight: 600;
-  color: #111827;
+  color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -212,7 +212,7 @@
 .username {
   margin: 0 0 4px 0;
   font-size: 13px;
-  color: #6b7280;
+  color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -221,7 +221,7 @@
 .followDate {
   margin: 0;
   font-size: 12px;
-  color: #9ca3af;
+  color: var(--text-muted);
 }
 
 .actions {
@@ -233,8 +233,8 @@
 
 .mutualBadge {
   padding: 2px 8px;
-  background: #dbeafe;
-  color: #1d4ed8;
+  background: var(--accent-bg);
+  color: var(--accent-text);
   border-radius: 12px;
   font-size: 11px;
   font-weight: 500;
@@ -247,7 +247,7 @@
   justify-content: center;
   gap: 8px;
   padding: 16px;
-  color: #6b7280;
+  color: var(--text-secondary);
   font-size: 14px;
 }
 
@@ -256,9 +256,9 @@
   align-items: center;
   justify-content: center;
   padding: 20px;
-  color: #9ca3af;
+  color: var(--text-muted);
   font-size: 14px;
-  border-top: 1px solid #f3f4f6;
+  border-top: 1px solid var(--border-color);
 }
 
 .endMessage p {
@@ -291,90 +291,49 @@
 /* Dark mode support */
 @media (prefers-color-scheme: dark) {
   .container {
-    background: #1f2937;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    background: var(--card-bg);
   }
 
   .header {
-    background: #374151;
-    border-bottom-color: #4b5563;
+    background: var(--card-hover-bg);
+    border-bottom-color: var(--border-color);
   }
 
   .header h3 {
-    color: #f9fafb;
+    color: var(--text-primary);
   }
 
   .refreshButton {
-    border-color: #6b7280;
-    color: #d1d5db;
+    border-color: var(--border-color);
+    color: var(--text-secondary);
   }
 
   .refreshButton:hover:not(:disabled) {
-    background: #4b5563;
-    border-color: #9ca3af;
-    color: #f3f4f6;
+    background: var(--card-hover-bg);
+    border-color: var(--border-color);
+    color: var(--text-primary);
   }
 
   .item {
-    border-bottom-color: #374151;
+    border-bottom-color: var(--border-color);
   }
 
   .item:hover {
-    background: #374151;
+    background: var(--card-hover-bg);
   }
 
-  .name {
-    color: #f9fafb;
-  }
-
-  .username {
-    color: #d1d5db;
-  }
-
-  .followDate {
-    color: #9ca3af;
-  }
-
-  .loading,
-  .loadingMore {
-    color: #d1d5db;
-  }
-
-  .errorState {
-    color: #f87171;
-  }
-
-  .errorMessage {
-    color: #6b7280;
-  }
-
-  .emptyState {
-    color: #d1d5db;
-  }
-
-  .emptyState h4 {
-    color: #f3f4f6;
-  }
-
-  .endMessage {
-    color: #6b7280;
-    border-top-color: #374151;
-  }
-
-  .mutualBadge {
-    background: #1e3a8a;
-    color: #93c5fd;
-  }
-
-  .avatarImage,
-  .avatarPlaceholder {
-    border-color: #4b5563;
-  }
-
-  .spinner {
-    border-color: #4b5563;
-    border-top-color: #60a5fa;
-  }
+  .name { color: var(--text-primary); }
+  .username { color: var(--text-secondary); }
+  .followDate { color: var(--text-muted); }
+  .loading, .loadingMore { color: var(--text-secondary); }
+  .errorState { color: #f87171; }
+  .errorMessage { color: var(--text-muted); }
+  .emptyState { color: var(--text-secondary); }
+  .emptyState h4 { color: var(--text-primary); }
+  .endMessage { color: var(--text-muted); border-top-color: var(--border-color); }
+  .mutualBadge { background: var(--accent-bg); color: var(--accent-text); }
+  .avatarImage, .avatarPlaceholder { border-color: var(--border-color); }
+  .spinner { border-color: var(--border-color); border-top-color: #60a5fa; }
 }
 
 /* Responsive design */

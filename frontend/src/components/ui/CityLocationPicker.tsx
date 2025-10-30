@@ -429,10 +429,10 @@ export function CityLocationPicker({
           placeholder={value ? "" : placeholder}
           disabled={disabled}
           required={required}
-          className={`w-full px-4 py-4 bg-gray-50 dark:bg-gray-700/50 border-2 rounded-xl focus:outline-none focus:ring-2 transition-all duration-300 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 hover:border-gray-300 dark:hover:border-gray-500 disabled:opacity-50 disabled:cursor-not-allowed ${
+          className={`w-full px-4 py-4 bg-[var(--card-hover-bg)] border-2 rounded-xl focus:outline-none focus:ring-2 transition-all duration-300 text-[var(--text-primary)] placeholder-gray-500 hover:bg-[var(--card-bg)] disabled:opacity-50 disabled:cursor-not-allowed ${
             error
-              ? "border-red-300 dark:border-red-600 focus:ring-red-500 focus:border-red-500"
-              : "border-gray-200 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500"
+              ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+              : "border-[var(--border-color)] focus:ring-blue-500 focus:border-blue-500"
           } ${className}`}
         />
 
@@ -442,7 +442,7 @@ export function CityLocationPicker({
             <button
               type="button"
               onClick={handleClear}
-              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 ml-2 flex-shrink-0"
+              className="text-[var(--text-muted)] hover:text-[var(--text-primary)] ml-2 flex-shrink-0"
               disabled={disabled}
             >
               ×
@@ -462,7 +462,7 @@ export function CityLocationPicker({
       {showSuggestions &&
         (!value || searchInput.trim() !== "") &&
         (suggestions.length > 0 || loading || internalError) && (
-          <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg max-h-60 overflow-y-auto">
+          <div className="absolute z-50 w-full mt-1 bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl shadow-lg max-h-60 overflow-y-auto">
             {internalError && (
               <div className="px-4 py-3 text-red-600 dark:text-red-400 text-sm">
                 {internalError}
@@ -470,7 +470,7 @@ export function CityLocationPicker({
             )}
 
             {loading && !internalError && (
-              <div className="px-4 py-3 text-gray-500 dark:text-gray-400 text-sm flex items-center">
+              <div className="px-4 py-3 text-[var(--text-muted)] text-sm flex items-center">
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400 mr-2"></div>
                 Searching cities...
               </div>
@@ -493,13 +493,13 @@ export function CityLocationPicker({
                 onMouseEnter={() => setSelectedIndex(index)}
                 className={`w-full px-4 py-3 text-left transition-colors duration-200 first:rounded-t-xl last:rounded-b-xl ${
                   selectedIndex === index
-                    ? "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
-                    : "hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white"
+                    ? "bg-blue-50 text-blue-700"
+                    : "hover:bg-[var(--card-hover-bg)] text-[var(--text-primary)]"
                 }`}
               >
                 <div className="font-medium">{location.name}</div>
                 {location.state || location.country ? (
-                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  <div className="text-xs text-[var(--text-muted)] mt-1">
                     {[location.state, location.country]
                       .filter(Boolean)
                       .join(", ")}

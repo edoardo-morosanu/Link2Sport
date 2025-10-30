@@ -15,6 +15,7 @@ import { AllTab } from "@/components/profile/AllTab";
 import { EditProfileModal } from "@/components/profile/EditProfileModal";
 import { FollowersModal, FollowingModal } from "@/components/Follow";
 import { useMyPosts } from "@/hooks/usePosts";
+import { AppShell } from "@/components/layout/AppShell";
 
 // Loading state component
 function ProfileLoadingState() {
@@ -103,10 +104,10 @@ function ProfileContent({
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+    <div className="min-h-screen bg-[var(--background)] transition-colors duration-300 pb-24 md:pb-0">
       <AppHeader />
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm transition-colors duration-300">
+      <AppShell className="pt-8">
+        <div className="bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl shadow-sm transition-colors duration-300">
           <ProfileHeader
             name={profile.name}
             username={profile.username}
@@ -124,7 +125,7 @@ function ProfileContent({
           <ProfileTabs activeTab={activeTab} onTabChange={setActiveTab} />
           <div className="p-6">{renderTabContent()}</div>
         </div>
-      </div>
+      </AppShell>
     </div>
   );
 }

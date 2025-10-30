@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { UserProfile } from "@/types/profile";
 import { AvatarUpload } from "@/components/ui/AvatarUpload";
 import { AvatarService } from "@/services/avatar";
+import { Modal } from "@/components/ui/Modal";
 
 interface EditProfileModalProps {
   isOpen: boolean;
@@ -104,64 +105,30 @@ export function EditProfileModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-300">
-      {/* Subtle animated background elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-gradient-to-br from-blue-400/5 to-purple-600/5 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-1/4 right-1/4 w-48 h-48 bg-gradient-to-tr from-teal-400/5 to-blue-600/5 rounded-full blur-2xl animate-pulse delay-1000"></div>
-      </div>
+    <Modal
+      isOpen={isOpen}
+      onClose={handleClose}
+      title="Edit Profile"
+      variant="neutral"
+      size="md"
+      icon={
+        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 20h9" />
+        </svg>
+      }
+    >
+      {/* Content */}
+      <div className="p-6">
+        {/* Error Message */}
+        {error && (
+          <div className="mb-4 bg-red-50/90 dark:bg-red-900/30 backdrop-blur-sm border border-red-200/50 dark:border-red-800/50 rounded-xl p-3 animate-in slide-in-from-top-2 duration-300">
+            <p className="text-sm text-red-600 dark:text-red-400 font-medium">
+              {error}
+            </p>
+          </div>
+        )}
 
-      <div className="relative max-w-md w-full">
-        {/* Main glass container */}
-        <div
-          ref={modalRef}
-          className="relative bg-white/85 dark:bg-gray-800/85 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/20 p-6 transition-all duration-300 animate-in slide-in-from-bottom-8"
-          style={{
-            background: `radial-gradient(circle at ${mousePosition.x}% ${mousePosition.y}%, rgba(59, 130, 246, 0.02), transparent 50%)`,
-          }}
-        >
-          {/* Subtle inner gradient overlay */}
-          <div className="absolute inset-0 bg-gradient-to-br from-white/3 via-transparent to-blue-500/1 dark:from-gray-700/3 dark:to-purple-500/1 rounded-2xl pointer-events-none"></div>
-
-          {/* Content */}
-          <div className="relative z-10">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white transition-colors duration-300">
-                Edit Profile
-              </h2>
-
-              <button
-                onClick={handleClose}
-                disabled={isLoading || avatarUploading}
-                className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100/50 dark:hover:bg-gray-700/30 rounded-lg"
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            </div>
-
-            {/* Error Message */}
-            {error && (
-              <div className="mb-4 bg-red-50/90 dark:bg-red-900/30 backdrop-blur-sm border border-red-200/50 dark:border-red-800/50 rounded-xl p-3 animate-in slide-in-from-top-2 duration-300">
-                <p className="text-sm text-red-600 dark:text-red-400 font-medium">
-                  {error}
-                </p>
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-5">
               {/* Avatar Upload Section */}
               <div className="space-y-3">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 text-center">
@@ -276,10 +243,8 @@ export function EditProfileModal({
                   )}
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
+        </form>
       </div>
-    </div>
+    </Modal>
   );
 }

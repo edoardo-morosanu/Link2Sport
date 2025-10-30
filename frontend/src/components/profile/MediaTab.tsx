@@ -19,11 +19,7 @@ export function MediaTab({ posts = [] }: MediaTabProps) {
   }, [posts]);
 
   if (!images.length) {
-    return (
-      <div className="text-center py-12 text-gray-500 dark:text-gray-400 transition-colors duration-300">
-        No media yet
-      </div>
-    );
+    return null;
   }
 
   return (
@@ -33,7 +29,7 @@ export function MediaTab({ posts = [] }: MediaTabProps) {
           <button
             key={`${src}-${idx}`}
             onClick={() => setPreviewUrl(src)}
-            className="group relative block overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
+            className="group relative block overflow-hidden rounded-lg border border-[var(--border-color)] bg-[var(--card-bg)]"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -52,7 +48,7 @@ export function MediaTab({ posts = [] }: MediaTabProps) {
           onClick={() => setPreviewUrl(null)}
         >
           <div
-            className="relative w-full max-w-4xl rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-2xl"
+            className="relative w-full max-w-4xl rounded-2xl overflow-hidden border border-[var(--border-color)] shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}

@@ -5,15 +5,58 @@ import (
 	"backend/src/models"
 	"backend/src/types"
 	"backend/src/utils"
+	"backend/src/services"
 	"fmt"
 	"io"
 	"net/http"
 	"strconv"
+	"regexp"
 
 	"github.com/gin-gonic/gin"
 )
 
 type PostController struct{}
+
+// DeleteComment deletes a comment (author or post owner only). Soft delete keeps children visible as roots.
+func (ec *PostController) DeleteComment(c *gin.Context) {
+    uidVal, exists := c.Get("userID")
+    if !exists { c.JSON(http.StatusUnauthorized, types.ErrorResponse{Error: "Unauthorized", Message: "User not authenticated"}); return }
+    uid := uidVal.(uint)
+
+    postID := c.Param("id")
+    postIDInt, err := strconv.ParseUint(postID, 10, 32)
+    if err != nil { c.JSON(http.StatusBadRequest, types.ErrorResponse{Error: "Invalid post ID", Message: "Post ID must be a valid number"}); return }
+
+    commentID := c.Param("commentId")
+    cid, err := strconv.ParseUint(commentID, 10, 32)
+    if err != nil { c.JSON(http.StatusBadRequest, types.ErrorResponse{Error: "Invalid comment ID", Message: "Comment ID must be a valid number"}); return }
+
+    var post models.Post
+    if err := config.DB.Select("id, user_id").First(&post, postIDInt).Error; err != nil {
+        c.JSON(http.StatusNotFound, types.ErrorResponse{Error: "Post not found", Message: "The requested post does not exist"})
+        return
+    }
+
+    var cm models.Comment
+    if err := config.DB.First(&cm, cid).Error; err != nil {
+        c.JSON(http.StatusNotFound, types.ErrorResponse{Error: "Comment not found", Message: "The requested comment does not exist"})
+        return
+    }
+    if cm.PostID != post.ID { c.JSON(http.StatusBadRequest, types.ErrorResponse{Error: "Invalid request", Message: "Comment does not belong to this post"}); return }
+
+    if cm.UserID != uid && post.UserID != uid {
+        c.JSON(http.StatusForbidden, types.ErrorResponse{Error: "Forbidden", Message: "You can only delete your own comments or comments on your post"})
+        return
+    }
+
+    if err := config.DB.Delete(&cm).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, types.ErrorResponse{Error: "Database error", Message: "Failed to delete comment"})
+        return
+    }
+
+    c.Status(http.StatusNoContent)
+}
+
 
 // ToggleLike toggles like for a post by the authenticated user
 func (ec *PostController) ToggleLike(c *gin.Context) {
@@ -61,6 +104,27 @@ func (ec *PostController) ToggleLike(c *gin.Context) {
             return
         }
         likedByMe = true
+
+        // Notify post author if not self-like
+        var postAuthor models.Post
+        if err := config.DB.Select("id, user_id, title").First(&postAuthor, post.ID).Error; err == nil {
+            if postAuthor.UserID != uid {
+                // Build and save notification
+                var actor models.User
+                _ = config.DB.Select("id, username, display_name").First(&actor, uid).Error
+                title := fmt.Sprintf("%s liked your post", func() string { if actor.DisplayName != "" { return actor.DisplayName }; return actor.Username }())
+                payload := types.JSON{
+                    "title":       title,
+                    "body":        postAuthor.Title,
+                    "target_type": "post",
+                    "target_id":   fmt.Sprintf("%d", postAuthor.ID),
+                }
+                notif := models.Notification{UserID: postAuthor.UserID, ActorID: &actor.ID, Type: types.NotificationTypeMessage, Payload: payload, Read: false}
+                if err := config.DB.Create(&notif).Error; err == nil {
+                    services.GetNotificationHub().Publish(notif)
+                }
+            }
+        }
     }
 
     // Recount likes
@@ -141,6 +205,20 @@ func (ec *PostController) UpdatePost(c *gin.Context) {
                     mention := models.PostMention{PostID: post.ID, UserID: u.ID}
                     _ = config.DB.Create(&mention).Error
                     mentionUsernames = append(mentionUsernames, u.Username)
+                }
+                // Notify mentioned users
+                var actor models.User
+                _ = config.DB.Select("id, username, display_name").First(&actor, userID).Error
+                for _, u := range users {
+                    if u.ID == actor.ID { continue }
+                    payload := types.JSON{
+                        "title":       fmt.Sprintf("%s mentioned you in a post", func() string { if actor.DisplayName != "" { return actor.DisplayName }; return actor.Username }()),
+                        "body":        *req.Title,
+                        "target_type": "post",
+                        "target_id":   fmt.Sprintf("%d", post.ID),
+                    }
+                    notif := models.Notification{UserID: u.ID, ActorID: &actor.ID, Type: types.NotificationTypeMessage, Payload: payload, Read: false}
+                    if err := config.DB.Create(&notif).Error; err == nil { services.GetNotificationHub().Publish(notif) }
                 }
             }
         }
@@ -325,6 +403,20 @@ func (ec *PostController) CreatePost(c *gin.Context) {
             })
             return
         }
+        // Notify mentioned users
+        var actor models.User
+        _ = config.DB.Select("id, username, display_name").First(&actor, userID).Error
+        for _, pm := range postMentions {
+            if pm.UserID == actor.ID { continue }
+            payload := types.JSON{
+                "title":       fmt.Sprintf("%s mentioned you in a post", func() string { if actor.DisplayName != "" { return actor.DisplayName }; return actor.Username }()),
+                "body":        req.Title,
+                "target_type": "post",
+                "target_id":   fmt.Sprintf("%d", post.ID),
+            }
+            notif := models.Notification{UserID: pm.UserID, ActorID: &actor.ID, Type: types.NotificationTypeMessage, Payload: payload, Read: false}
+            if err := config.DB.Create(&notif).Error; err == nil { services.GetNotificationHub().Publish(notif) }
+        }
     }
 
     var imageURL *string
@@ -369,8 +461,15 @@ func (ec *PostController) GetPosts(c *gin.Context) {
 
     limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
     offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+    scope := c.DefaultQuery("scope", "all")
 
     query := config.DB.Preload("Author").Where("deleted_at IS NULL")
+    if scope == "following" {
+        // Only posts from users current user follows
+        uid := userID.(uint)
+        sub := config.DB.Model(&models.Follow{}).Select("followed_id").Where("follower_id = ?", uid)
+        query = query.Where("user_id IN (?)", sub)
+    }
     var posts []models.Post
     if err := query.Limit(limit).Offset(offset).Order("created_at DESC").Find(&posts).Error; err != nil {
         c.JSON(http.StatusInternalServerError, types.ErrorResponse{Error: "Database error", Message: "Failed to fetch posts"})
@@ -600,14 +699,6 @@ func (ec *PostController) UploadPostImage(c *gin.Context) {
 // @Failure      404 {object} types.ErrorResponse "Post not found"
 // @Router       /posts/{id}/image [get]
 func (ec *PostController) GetPostImage(c *gin.Context) {
-    _, exists := c.Get("userID")
-    if !exists {
-        c.JSON(http.StatusUnauthorized, types.ErrorResponse{
-            Error:   "Unauthorized",
-            Message: "User not authenticated",
-        })
-        return
-    }
 
     postID := c.Param("id")
     postIDInt, err := strconv.ParseUint(postID, 10, 32)
@@ -638,4 +729,161 @@ func (ec *PostController) GetPostImage(c *gin.Context) {
     c.Header("Content-Type", contentType)
     c.Header("Cache-Control", "public, max-age=86400")
     c.Data(http.StatusOK, contentType, post.ImageData)
+}
+
+// GetPostComments returns nested comments for a post
+func (ec *PostController) GetPostComments(c *gin.Context) {
+    _, exists := c.Get("userID")
+    if !exists { c.JSON(http.StatusUnauthorized, types.ErrorResponse{Error: "Unauthorized", Message: "User not authenticated"}); return }
+
+    postID := c.Param("id")
+    postIDInt, err := strconv.ParseUint(postID, 10, 32)
+    if err != nil { c.JSON(http.StatusBadRequest, types.ErrorResponse{Error: "Invalid post ID", Message: "Post ID must be a valid number"}); return }
+
+    var post models.Post
+    if err := config.DB.Select("id").First(&post, postIDInt).Error; err != nil {
+        c.JSON(http.StatusNotFound, types.ErrorResponse{Error: "Post not found", Message: "The requested post does not exist"})
+        return
+    }
+
+    var comments []models.Comment
+    if err := config.DB.Preload("Author").Where("post_id = ?", post.ID).Order("created_at ASC").Find(&comments).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, types.ErrorResponse{Error: "Database error", Message: "Failed to fetch comments"})
+        return
+    }
+
+    // Build adjacency and node maps
+    nodes := make(map[uint]*types.CommentResponse)
+    childrenMap := make(map[uint][]uint)
+    for _, cm := range comments {
+        node := &types.CommentResponse{
+            ID: cm.ID, PostID: cm.PostID, UserID: cm.UserID, ParentID: cm.ParentID, Body: cm.Body, CreatedAt: cm.CreatedAt, UpdatedAt: cm.UpdatedAt,
+            AuthorUsername: cm.Author.Username, AuthorDisplayName: cm.Author.DisplayName,
+        }
+        nodes[cm.ID] = node
+        if cm.ParentID != nil { childrenMap[*cm.ParentID] = append(childrenMap[*cm.ParentID], cm.ID) }
+    }
+
+    // Recursive builder to produce value trees
+    var build func(n *types.CommentResponse) types.CommentResponse
+    build = func(n *types.CommentResponse) types.CommentResponse {
+        out := *n
+        for _, childID := range childrenMap[n.ID] {
+            if childNode, ok := nodes[childID]; ok {
+                out.Children = append(out.Children, build(childNode))
+            }
+        }
+        return out
+    }
+
+    // Preserve original order by scanning comments slice
+    var roots []types.CommentResponse
+    for _, cm := range comments {
+        // root if has no parent OR parent is missing (e.g., deleted)
+        if cm.ParentID == nil || nodes[*cm.ParentID] == nil {
+            if node, ok := nodes[cm.ID]; ok {
+                roots = append(roots, build(node))
+            }
+        }
+    }
+
+    c.JSON(http.StatusOK, roots)
+}
+
+// CreateComment creates a comment for a post, optionally as a reply to another comment
+func (ec *PostController) CreateComment(c *gin.Context) {
+    uid, exists := c.Get("userID")
+    if !exists { c.JSON(http.StatusUnauthorized, types.ErrorResponse{Error: "Unauthorized", Message: "User not authenticated"}); return }
+
+    postID := c.Param("id")
+    postIDInt, err := strconv.ParseUint(postID, 10, 32)
+    if err != nil { c.JSON(http.StatusBadRequest, types.ErrorResponse{Error: "Invalid post ID", Message: "Post ID must be a valid number"}); return }
+
+    var post models.Post
+    if err := config.DB.Select("id").First(&post, postIDInt).Error; err != nil {
+        c.JSON(http.StatusNotFound, types.ErrorResponse{Error: "Post not found", Message: "The requested post does not exist"})
+        return
+    }
+
+    var req types.CreateCommentRequest
+    if err := c.ShouldBindJSON(&req); err != nil {
+        c.JSON(http.StatusBadRequest, types.ErrorResponse{Error: "Invalid request", Message: err.Error()})
+        return
+    }
+    if len(req.Body) == 0 {
+        c.JSON(http.StatusBadRequest, types.ErrorResponse{Error: "Validation error", Message: "Body is required"})
+        return
+    }
+
+    var parentID *uint
+    if req.ParentID != nil {
+        var parent models.Comment
+        if err := config.DB.Select("id, post_id").First(&parent, *req.ParentID).Error; err != nil {
+            c.JSON(http.StatusBadRequest, types.ErrorResponse{Error: "Invalid parent", Message: "Parent comment not found"})
+            return
+        }
+        if parent.PostID != post.ID {
+            c.JSON(http.StatusBadRequest, types.ErrorResponse{Error: "Invalid parent", Message: "Parent comment belongs to a different post"})
+            return
+        }
+        parentID = req.ParentID
+    }
+
+    commenterID := uid.(uint)
+    cm := models.Comment{PostID: post.ID, UserID: commenterID, ParentID: parentID, Body: req.Body}
+    if err := config.DB.Create(&cm).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, types.ErrorResponse{Error: "Database error", Message: "Failed to create comment"})
+        return
+    }
+
+    _ = config.DB.Preload("Author").First(&cm, cm.ID).Error
+
+    resp := types.CommentResponse{ID: cm.ID, PostID: cm.PostID, UserID: cm.UserID, ParentID: cm.ParentID, Body: cm.Body, CreatedAt: cm.CreatedAt, UpdatedAt: cm.UpdatedAt, AuthorUsername: cm.Author.Username, AuthorDisplayName: cm.Author.DisplayName}
+    c.JSON(http.StatusCreated, resp)
+
+    // Build actor info
+    var actor models.User
+    _ = config.DB.Select("id, username, display_name").First(&actor, commenterID).Error
+
+    // Notify post author (if not self comment)
+    var postRow models.Post
+    if err := config.DB.Select("id, user_id, title").First(&postRow, post.ID).Error; err == nil {
+        if postRow.UserID != commenterID {
+            payload := types.JSON{"title": fmt.Sprintf("%s commented on your post", func() string { if actor.DisplayName != "" { return actor.DisplayName }; return actor.Username }()), "body": postRow.Title, "target_type": "post", "target_id": fmt.Sprintf("%d", postRow.ID)}
+            notif := models.Notification{UserID: postRow.UserID, ActorID: &actor.ID, Type: types.NotificationTypeMessage, Payload: payload, Read: false}
+            if err := config.DB.Create(&notif).Error; err == nil { services.GetNotificationHub().Publish(notif) }
+        }
+    }
+
+    // Notify parent comment author if reply
+    if parentID != nil {
+        var parent models.Comment
+        if err := config.DB.Select("id, user_id").First(&parent, *parentID).Error; err == nil {
+            if parent.UserID != commenterID && parent.UserID != postRow.UserID {
+                payload := types.JSON{"title": fmt.Sprintf("%s replied to your comment", func() string { if actor.DisplayName != "" { return actor.DisplayName }; return actor.Username }()), "body": postRow.Title, "target_type": "post", "target_id": fmt.Sprintf("%d", postRow.ID)}
+                notif := models.Notification{UserID: parent.UserID, ActorID: &actor.ID, Type: types.NotificationTypeMessage, Payload: payload, Read: false}
+                if err := config.DB.Create(&notif).Error; err == nil { services.GetNotificationHub().Publish(notif) }
+            }
+        }
+    }
+
+    // Extract mentions from comment body and notify
+    mentionRe := regexp.MustCompile(`@([A-Za-z0-9_]+)`) 
+    matches := mentionRe.FindAllStringSubmatch(req.Body, -1)
+    if len(matches) > 0 {
+        seen := make(map[uint]struct{})
+        for _, m := range matches {
+            if len(m) < 2 { continue }
+            username := m[1]
+            var u models.User
+            if err := config.DB.Select("id").Where("username = ?", username).First(&u).Error; err == nil {
+                if u.ID == commenterID { continue }
+                if _, ok := seen[u.ID]; ok { continue }
+                seen[u.ID] = struct{}{}
+                payload := types.JSON{"title": fmt.Sprintf("%s mentioned you in a comment", func() string { if actor.DisplayName != "" { return actor.DisplayName }; return actor.Username }()), "body": postRow.Title, "target_type": "post", "target_id": fmt.Sprintf("%d", postRow.ID)}
+                notif := models.Notification{UserID: u.ID, ActorID: &actor.ID, Type: types.NotificationTypeMessage, Payload: payload, Read: false}
+                if err := config.DB.Create(&notif).Error; err == nil { services.GetNotificationHub().Publish(notif) }
+            }
+        }
+    }
 }

@@ -40,6 +40,11 @@ func SetupPostRoutes(router *gin.Engine, postController *controllers.PostControl
 		// Toggle like on a post
 		postGroup.POST("/:id/like", postController.ToggleLike)
 
+		// Comments on a post
+		postGroup.GET("/:id/comments", postController.GetPostComments)
+		postGroup.POST("/:id/comments", postController.CreateComment)
+		postGroup.DELETE("/:id/comments/:commentId", postController.DeleteComment)
+
 		// Temporary: Ping route to verify posts group reachability
 		postGroup.GET("/ping", func(c *gin.Context) { c.Status(200) })
 	}

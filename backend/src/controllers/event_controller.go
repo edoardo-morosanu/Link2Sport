@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+	"strings"
+	"math"
 
 	"github.com/gin-gonic/gin"
 )
@@ -23,67 +25,82 @@ type EventController struct{}
 // @Produce      json
 // @Security     BearerAuth
 // @Param        id path int true "User ID"
-// @Success      200 {array} types.EventResponse "List of user's events"
+// @Success      200 {array} types.EventWithOrganizerResponse "List of user's events"
 // @Failure      400 {object} types.ErrorResponse "Invalid user ID"
 // @Failure      401 {object} types.ErrorResponse "User not authenticated"
 // @Router       /events/user/{id} [get]
 func (ec *EventController) GetUserEventsByID(c *gin.Context) {
-    _, exists := c.Get("userID")
-    if !exists {
-        c.JSON(http.StatusUnauthorized, types.ErrorResponse{
-            Error:   "Unauthorized",
-            Message: "User not authenticated",
-        })
-        return
-    }
+	userVal, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, types.ErrorResponse{
+			Error:   "Unauthorized",
+			Message: "User not authenticated",
+		})
+		return
+	}
 
-    userParam := c.Param("id")
-    uid, err := strconv.ParseUint(userParam, 10, 32)
-    if err != nil {
-        c.JSON(http.StatusBadRequest, types.ErrorResponse{
-            Error:   "Invalid user ID",
-            Message: "User ID must be a valid number",
-        })
-        return
-    }
+	userParam := c.Param("id")
+	uid, err := strconv.ParseUint(userParam, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, types.ErrorResponse{
+			Error:   "Invalid user ID",
+			Message: "User ID must be a valid number",
+		})
+		return
+	}
 
-    var events []models.Event
-    if err := config.DB.Where("organizer_id = ? AND deleted_at IS NULL", uint(uid)).Order("start_at DESC").Find(&events).Error; err != nil {
-        c.JSON(http.StatusInternalServerError, types.ErrorResponse{
-            Error:   "Database error",
-            Message: "Failed to fetch user events",
-        })
-        return
-    }
+	var events []models.Event
+	if err := config.DB.Preload("Organizer").Where("organizer_id = ? AND deleted_at IS NULL", uint(uid)).Order("start_at DESC").Find(&events).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, types.ErrorResponse{
+			Error:   "Database error",
+			Message: "Failed to fetch user events",
+		})
+		return
+	}
 
-    response := make([]types.EventResponse, 0, len(events))
-    for _, event := range events {
-        var participantCount int64
-        config.DB.Model(&models.EventParticipant{}).Where("event_id = ?", event.ID).Count(&participantCount)
+	response := make([]types.EventWithOrganizerResponse, 0, len(events))
+	for _, event := range events {
+		var participantCount int64
+		config.DB.Model(&models.EventParticipant{}).Where("event_id = ?", event.ID).Count(&participantCount)
 
-        eventResponse := types.EventResponse{
-            ID:           event.ID,
-            OrganizerID:  event.OrganizerID,
-            Type:         types.EventType(event.Type),
-            Title:        event.Title,
-            Description:  event.Description,
-            Sport:        event.Sport,
-            StartAt:      event.StartAt,
-            EndAt:        event.EndAt,
-            LocationName: event.LocationName,
-            Latitude:     *event.Latitude,
-            Longitude:    *event.Longitude,
-            Capacity:     event.Capacity,
-            Participants: int(participantCount),
-            Status:       types.EventStatus(event.Status),
-            CreatedAt:    event.CreatedAt,
-            UpdatedAt:    event.UpdatedAt,
-        }
+		// Relative to current authenticated user
+		isOrganizer := event.OrganizerID == userVal.(uint)
+		var participantExists int64
+		config.DB.Model(&models.EventParticipant{}).Where("event_id = ? AND user_id = ?", event.ID, userVal).Count(&participantExists)
+		isParticipant := participantExists > 0
 
-        response = append(response, eventResponse)
-    }
+		avatarURL := fmt.Sprintf("/api/user/%d/avatar", event.Organizer.ID)
 
-    c.JSON(http.StatusOK, response)
+		eventResponse := types.EventWithOrganizerResponse{
+			EventResponse: types.EventResponse{
+				ID:           event.ID,
+				OrganizerID:  event.OrganizerID,
+				Type:         types.EventType(event.Type),
+				Title:        event.Title,
+				Description:  event.Description,
+				Sport:        event.Sport,
+				StartAt:      event.StartAt,
+				EndAt:        event.EndAt,
+				LocationName: event.LocationName,
+				Latitude:     *event.Latitude,
+				Longitude:    *event.Longitude,
+				Capacity:     event.Capacity,
+				Participants: int(participantCount),
+				Status:       types.EventStatus(event.Status),
+				CreatedAt:    event.CreatedAt,
+				UpdatedAt:    event.UpdatedAt,
+			},
+			OrganizerName:     event.Organizer.DisplayName,
+			OrganizerUsername: event.Organizer.Username,
+			OrganizerAvatar:   &avatarURL,
+			IsOrganizer:       isOrganizer,
+			IsParticipant:     isParticipant,
+		}
+
+		response = append(response, eventResponse)
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 
 func NewEventController() *EventController {
@@ -181,8 +198,13 @@ func (ec *EventController) CreateEvent(c *gin.Context) {
 // @Security     BearerAuth
 // @Param        sport query string false "Filter by sport"
 // @Param        type query string false "Filter by type (game, event, training)"
+// @Param        location query string false "Filter by location"
+// @Param        scope query string false "Filter by scope (all, following)"
 // @Param        limit query int false "Limit number of results" default(20)
 // @Param        offset query int false "Offset for pagination" default(0)
+// @Param        lat query float false "Latitude for geospatial filtering"
+// @Param        lng query float false "Longitude for geospatial filtering"
+// @Param        radius_km query float false "Radius in kilometers for geospatial filtering"
 // @Success      200 {array} types.EventWithOrganizerResponse "List of events"
 // @Failure      401 {object} types.ErrorResponse "User not authenticated"
 // @Router       /events [get]
@@ -198,6 +220,16 @@ func (ec *EventController) GetEvents(c *gin.Context) {
 
 	sport := c.Query("sport")
 	eventType := c.Query("type")
+	location := c.Query("location")
+	scope := c.DefaultQuery("scope", "all")
+	latStr := c.Query("lat")
+	lngStr := c.Query("lng")
+	radiusStr := c.Query("radius_km")
+	statusParam := c.Query("status")
+	startAfterStr := c.Query("start_after")
+	startBeforeStr := c.Query("start_before")
+	minCapacityStr := c.Query("min_capacity")
+	maxCapacityStr := c.Query("max_capacity")
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
 	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
 
@@ -207,6 +239,81 @@ func (ec *EventController) GetEvents(c *gin.Context) {
 	}
 	if eventType != "" {
 		query = query.Where("type = ?", eventType)
+	}
+	if location != "" {
+		// Case-insensitive contains match on location_name
+		query = query.Where("LOWER(location_name) LIKE ?", "%"+strings.ToLower(location)+"%")
+	}
+	if scope == "following" {
+		// Only events organized by users the current user follows
+		sub := config.DB.Model(&models.Follow{}).Select("followed_id").Where("follower_id = ?", userID)
+		query = query.Where("organizer_id IN (?)", sub)
+	}
+
+	// Status filter (supports comma-separated list)
+	if statusParam != "" {
+		parts := strings.Split(statusParam, ",")
+		statuses := make([]string, 0, len(parts))
+		for _, p := range parts {
+			s := strings.TrimSpace(strings.ToLower(p))
+			if s == "upcoming" || s == "active" || s == "complete" || s == "cancelled" {
+				statuses = append(statuses, s)
+			}
+		}
+		if len(statuses) > 0 {
+			query = query.Where("status IN (?)", statuses)
+		}
+	}
+
+	// Date range filters (RFC3339)
+	if startAfterStr != "" {
+		if t, err := time.Parse(time.RFC3339, startAfterStr); err == nil {
+			query = query.Where("start_at >= ?", t)
+		}
+	}
+	if startBeforeStr != "" {
+		if t, err := time.Parse(time.RFC3339, startBeforeStr); err == nil {
+			query = query.Where("start_at <= ?", t)
+		}
+	}
+
+	// Capacity filters (only consider events that define capacity)
+	if minCapacityStr != "" {
+		if v, err := strconv.Atoi(minCapacityStr); err == nil {
+			query = query.Where("capacity IS NOT NULL AND capacity >= ?", v)
+		}
+	}
+	if maxCapacityStr != "" {
+		if v, err := strconv.Atoi(maxCapacityStr); err == nil {
+			query = query.Where("capacity IS NOT NULL AND capacity <= ?", v)
+		}
+	}
+
+	// Geospatial bounding box filtering if lat/lng/radius provided
+	if latStr != "" && lngStr != "" && radiusStr != "" {
+		if lat, err1 := strconv.ParseFloat(latStr, 64); err1 == nil {
+			if lng, err2 := strconv.ParseFloat(lngStr, 64); err2 == nil {
+				if radiusKm, err3 := strconv.ParseFloat(radiusStr, 64); err3 == nil && radiusKm > 0 {
+					// Approximate deltas (Earth ~ 6371km). 1 deg lat ~= 111.32 km
+					latDelta := radiusKm / 111.32
+					// Avoid division by zero at poles
+					cosLat := math.Cos(lat * math.Pi / 180)
+					if cosLat < 1e-6 {
+						cosLat = 1e-6
+					}
+					lngDelta := radiusKm / (111.32 * cosLat)
+
+					minLat := lat - latDelta
+					maxLat := lat + latDelta
+					minLng := lng - lngDelta
+					maxLng := lng + lngDelta
+
+					// Basic bounding box; note: does not handle antimeridian wrap
+					query = query.Where("latitude BETWEEN ? AND ?", minLat, maxLat)
+					query = query.Where("longitude BETWEEN ? AND ?", minLng, maxLng)
+				}
+			}
+		}
 	}
 
 	var events []models.Event
@@ -511,6 +618,24 @@ func (ec *EventController) UpdateEvent(c *gin.Context) {
 		return
 	}
 
+	// Notify participants about update
+	var participants []models.EventParticipant
+	if err := config.DB.Where("event_id = ?", event.ID).Find(&participants).Error; err == nil && len(participants) > 0 {
+		for _, p := range participants {
+			if p.UserID == event.OrganizerID { continue }
+			payload := types.JSON{
+				"title":       "Activity updated",
+				"body":        event.Title,
+				"target_type": "activity",
+				"target_id":   fmt.Sprintf("%d", event.ID),
+			}
+			notif := models.Notification{ UserID: p.UserID, ActorID: &event.OrganizerID, Type: types.NotificationTypeSystem, Payload: payload, Read: false }
+			if err := config.DB.Create(&notif).Error; err == nil {
+				services.GetNotificationHub().Publish(notif)
+			}
+		}
+	}
+
 	// Get participant count
 	var participantCount int64
 	config.DB.Model(&models.EventParticipant{}).Where("event_id = ?", event.ID).Count(&participantCount)
@@ -596,6 +721,24 @@ func (ec *EventController) DeleteEvent(c *gin.Context) {
 			Message: "Failed to cancel event",
 		})
 		return
+	}
+
+	// Notify participants about cancellation
+	var participants []models.EventParticipant
+	if err := config.DB.Where("event_id = ?", event.ID).Find(&participants).Error; err == nil && len(participants) > 0 {
+		for _, p := range participants {
+			if p.UserID == event.OrganizerID { continue }
+			payload := types.JSON{
+				"title":       "Activity cancelled",
+				"body":        event.Title,
+				"target_type": "activity",
+				"target_id":   fmt.Sprintf("%d", event.ID),
+			}
+			notif := models.Notification{ UserID: p.UserID, ActorID: &event.OrganizerID, Type: types.NotificationTypeSystem, Payload: payload, Read: false }
+			if err := config.DB.Create(&notif).Error; err == nil {
+				services.GetNotificationHub().Publish(notif)
+			}
+		}
 	}
 
 	if err := config.DB.Delete(&event).Error; err != nil {
@@ -709,15 +852,26 @@ func (ec *EventController) JoinEvent(c *gin.Context) {
 		return
 	}
 
+	// Notify organizer that someone joined
+	var actor models.User
+	_ = config.DB.First(&actor, userID).Error
+	title := fmt.Sprintf("%s joined your activity", func() string { if actor.DisplayName != "" { return actor.DisplayName }; return actor.Username }())
+	payload := types.JSON{
+		"title":       title,
+		"body":        event.Title,
+		"target_type": "activity",
+		"target_id":   fmt.Sprintf("%d", event.ID),
+	}
+	notif := models.Notification{ UserID: event.OrganizerID, ActorID: &actor.ID, Type: types.NotificationTypeMessage, Payload: payload, Read: false }
+	if err := config.DB.Create(&notif).Error; err == nil {
+		services.GetNotificationHub().Publish(notif)
+	}
+
 	c.JSON(http.StatusCreated, gin.H{
 		"message":  "Successfully joined event",
 		"event_id": eventIDInt,
 	})
 }
-
-// LeaveEvent godoc
-// @Summary      Leave an event
-// @Description  Leave an event as a participant
 // @Tags         Events
 // @Accept       json
 // @Produce      json

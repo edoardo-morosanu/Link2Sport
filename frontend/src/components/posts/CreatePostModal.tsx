@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { CreatePostData } from "@/types/post";
 import { SearchService } from "@/services/search";
 import type { SearchUser } from "@/types/search";
+import { Modal } from "@/components/ui/Modal";
 
 interface CreatePostModalProps {
   isOpen: boolean;
@@ -23,8 +24,7 @@ export function CreatePostModal({ isOpen, onClose, onSave }: CreatePostModalProp
   const [showMentionDropdown, setShowMentionDropdown] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const modalRef = useRef<HTMLDivElement>(null);
+  
 
   const [imageFile, setImageFile] = useState<File | undefined>(undefined);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -76,21 +76,9 @@ export function CreatePostModal({ isOpen, onClose, onSave }: CreatePostModalProp
     setShowMentionDropdown(false);
   };
 
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (modalRef.current) {
-        const rect = modalRef.current.getBoundingClientRect();
-        const x = ((e.clientX - rect.left) / rect.width) * 100;
-        const y = ((e.clientY - rect.top) / rect.height) * 100;
-        setMousePosition({ x, y });
-      }
-    };
+  
 
-    if (isOpen) document.addEventListener("mousemove", handleMouseMove);
-    return () => document.removeEventListener("mousemove", handleMouseMove);
-  }, [isOpen]);
-
-  if (!isOpen) return null;
+  
 
   const reset = () => {
     setFormData({ title: "", body: "", mentions: [] });
@@ -152,41 +140,31 @@ export function CreatePostModal({ isOpen, onClose, onSave }: CreatePostModalProp
   };
 
   return (
-    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-300">
-      <div className="relative max-w-xl w-full max-h-[95vh] overflow-y-auto">
-        <div
-          ref={modalRef}
-          className="relative bg-white/85 dark:bg-gray-800/85 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/20 p-6 transition-all duration-300 animate-in slide-in-from-bottom-8"
-          style={{
-            background: `radial-gradient(circle at ${mousePosition.x}% ${mousePosition.y}%, rgba(59, 130, 246, 0.02), transparent 50%)`,
-          }}
-        >
-          <div className="absolute inset-0 bg-gradient-to-br from-white/3 via-transparent to-blue-500/1 dark:from-gray-700/3 dark:to-purple-500/1 rounded-2xl pointer-events-none"></div>
+    <Modal
+      isOpen={isOpen}
+      onClose={handleClose}
+      title={
+        <div>
+          <h2 className="text-2xl font-bold text-[var(--text-primary)]">Create Post</h2>
+          <p className="text-sm text-[var(--text-muted)] mt-1">Share what's happening</p>
+        </div>
+      }
+      variant="neutral"
+      size="lg"
+      icon={
+        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+        </svg>
+      }
+    >
+      <div className="p-6">
+        {error && (
+          <div className="mb-4 bg-red-50/90 dark:bg-red-900/30 backdrop-blur-sm border border-red-200/50 dark:border-red-800/50 rounded-xl p-3">
+            <p className="text-sm text-red-600 dark:text-red-400 font-medium">{error}</p>
+          </div>
+        )}
 
-          <div className="relative z-10">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Create Post</h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Share what's happening</p>
-              </div>
-              <button
-                onClick={handleClose}
-                disabled={isSubmitting}
-                className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-all duration-200 disabled:opacity-50 hover:bg-gray-100/50 dark:hover:bg-gray-700/30 rounded-lg"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            {error && (
-              <div className="mb-4 bg-red-50/90 dark:bg-red-900/30 backdrop-blur-sm border border-red-200/50 dark:border-red-800/50 rounded-xl p-3">
-                <p className="text-sm text-red-600 dark:text-red-400 font-medium">{error}</p>
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Title *</label>
                 <input
@@ -312,10 +290,8 @@ export function CreatePostModal({ isOpen, onClose, onSave }: CreatePostModalProp
                   )}
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
+        </form>
       </div>
-    </div>
+    </Modal>
   );
 }

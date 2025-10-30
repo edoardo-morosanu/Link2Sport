@@ -4,6 +4,7 @@ import (
 	"backend/src/config"
 	"backend/src/models"
 	"backend/src/types"
+	"backend/src/services"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -88,6 +89,30 @@ func (fc *FollowController) FollowUser(c *gin.Context) {
 			Message: "Failed to create follow relationship",
 		})
 		return
+	}
+
+	// Emit notification to the followed user
+	var actor models.User
+	if err := config.DB.First(&actor, currentUserID).Error; err == nil {
+		title := fmt.Sprintf("%s started following you", actor.DisplayName)
+		if actor.DisplayName == "" {
+			title = fmt.Sprintf("%s started following you", actor.Username)
+		}
+		payload := types.JSON{
+			"title":       title,
+			"target_type": "user",
+			"target_id":   fmt.Sprintf("%d", actor.ID),
+		}
+		notif := models.Notification{
+			UserID:  uint(targetUserID),
+			ActorID: &actor.ID,
+			Type:    types.NotificationTypeFollow,
+			Payload: payload,
+			Read:    false,
+		}
+		if err := config.DB.Create(&notif).Error; err == nil {
+			services.GetNotificationHub().Publish(notif)
+		}
 	}
 
 	c.JSON(http.StatusOK, types.FollowResponse{

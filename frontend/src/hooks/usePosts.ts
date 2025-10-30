@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { PostService } from "@/services/post";
 import { Post, CreatePostData } from "@/types/post";
 
-export function usePosts() {
+export function usePosts(scope: "all" | "following" = "all") {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -11,7 +11,7 @@ export function usePosts() {
     try {
       setLoading(true);
       setError(null);
-      const data = await PostService.getPosts();
+      const data = await PostService.getPosts(20, 0, scope);
       setPosts(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch posts");
@@ -19,7 +19,7 @@ export function usePosts() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [scope]);
 
   useEffect(() => {
     fetchPosts();

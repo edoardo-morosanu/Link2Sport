@@ -1,12 +1,134 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { Dispatch, SetStateAction, KeyboardEvent } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { PostService } from "@/services/post";
 import { AvatarService } from "@/services/avatar";
 import type { Post } from "@/types/post";
 import { AuthService } from "@/services/auth";
 import type { UpdatePostData } from "@/types/post";
+import { CommentService } from "@/services/comment";
+import type { CommentNode } from "@/types/comment";
+import { AppHeader } from "@/components/profile/AppHeader";
+import { AppShell } from "@/components/layout/AppShell";
+import { Card } from "@/components/ui/primitives/Card";
+
+type CommentItemProps = {
+  node: CommentNode;
+  onReplyClick: (id: string) => void;
+  replyingTo: string | null;
+  replyText: string;
+  setReplyText: Dispatch<SetStateAction<string>>;
+  onSubmitReply: (parentId: string, text: string) => Promise<void> | void;
+  currentUserId: string | null;
+  postOwnerId?: string | null;
+  onDelete: (commentId: string) => Promise<void> | void;
+};
+
+function CommentItem({
+  node,
+  onReplyClick,
+  replyingTo,
+  replyText,
+  setReplyText,
+  onSubmitReply,
+  currentUserId,
+  postOwnerId,
+  onDelete,
+}: CommentItemProps) {
+  const isReplyingHere = replyingTo === node.id;
+  const canDelete = !!currentUserId && (currentUserId === node.user_id || (!!postOwnerId && currentUserId === postOwnerId));
+  return (
+    <li>
+      <div className="flex gap-3">
+        <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-700 flex-none">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={AvatarService.getAvatarUrl(node.user_id)}
+            alt={node.author_display_name || node.author_username || "user"}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              const target = e.currentTarget as HTMLImageElement;
+              target.onerror = null;
+              target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(node.author_username || node.author_display_name || "User")}&size=200&background=3b82f6&color=fff`;
+            }}
+          />
+        </div>
+        <div className="flex-1">
+          <div className="text-sm text-gray-900 dark:text-white">
+            <span className="font-medium">{node.author_display_name || node.author_username || "User"}</span>
+            <span className="ml-2 text-gray-500 dark:text-gray-400 text-xs">{new Date(node.created_at).toLocaleString()}</span>
+          </div>
+          <div className="mt-1 text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{node.body}</div>
+          <div className="mt-2 flex items-center gap-3">
+            <button
+              onClick={() => onReplyClick(node.id)}
+              className="text-xs text-blue-600 hover:underline"
+            >
+              Reply
+            </button>
+            {canDelete && (
+              <button
+                onClick={async () => {
+                  if (!confirm("Delete this comment?")) return;
+                  await onDelete(node.id);
+                }}
+                className="text-xs text-red-600 hover:underline"
+              >
+                Delete
+              </button>
+            )}
+          </div>
+          {isReplyingHere && (
+            <div className="mt-2 flex gap-2">
+              <input
+                value={replyText}
+                onChange={(e) => setReplyText(e.target.value)}
+                onKeyDown={async (e) => {
+                  if ((e as unknown as KeyboardEvent<HTMLInputElement>).key === "Enter") {
+                    e.preventDefault();
+                    if (!replyText.trim()) return;
+                    await onSubmitReply(node.id, replyText);
+                  }
+                }}
+                placeholder="Write a reply"
+                className="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white"
+              />
+              <button
+                onClick={async () => {
+                  if (!replyText.trim()) return;
+                  await onSubmitReply(node.id, replyText);
+                }}
+                className="px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 text-sm"
+              >
+                Reply
+              </button>
+            </div>
+          )}
+          {node.children && node.children.length > 0 && (
+            <ul className="mt-3 ml-6 border-l border-gray-200 dark:border-gray-700 pl-4 space-y-3">
+              {node.children.map((child) => (
+                <CommentItem
+                  key={child.id}
+                  node={child}
+                  onReplyClick={onReplyClick}
+                  replyingTo={replyingTo}
+                  replyText={replyText}
+                  setReplyText={setReplyText}
+                  onSubmitReply={onSubmitReply}
+                  currentUserId={currentUserId}
+                  postOwnerId={postOwnerId}
+                  onDelete={onDelete}
+                />
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    </li>
+  );
+}
 
 export default function PostDetailPage() {
   const params = useParams();
@@ -23,6 +145,12 @@ export default function PostDetailPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [likes, setLikes] = useState<number>(0);
   const [liked, setLiked] = useState<boolean>(false);
+  const [comments, setComments] = useState<CommentNode[]>([]);
+  const [commentsLoading, setCommentsLoading] = useState<boolean>(false);
+  const [commentsError, setCommentsError] = useState<string | null>(null);
+  const [newComment, setNewComment] = useState<string>("");
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState<string>("");
 
   useEffect(() => {
     async function fetchPost() {
@@ -44,6 +172,23 @@ export default function PostDetailPage() {
     fetchPost();
   }, [postId]);
 
+  useEffect(() => {
+    async function fetchComments() {
+      if (!postId) return;
+      try {
+        setCommentsLoading(true);
+        setCommentsError(null);
+        const list = await CommentService.getByPost(postId);
+        setComments(list);
+      } catch (err) {
+        setCommentsError(err instanceof Error ? err.message : "Failed to load comments");
+      } finally {
+        setCommentsLoading(false);
+      }
+    }
+    fetchComments();
+  }, [postId]);
+
   const refresh = async () => {
     if (!postId) return;
     setLoading(true);
@@ -56,6 +201,20 @@ export default function PostDetailPage() {
       setError(err instanceof Error ? err.message : "Failed to load post");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const reloadComments = async () => {
+    if (!postId) return;
+    try {
+      setCommentsLoading(true);
+      setCommentsError(null);
+      const list = await CommentService.getByPost(postId);
+      setComments(list);
+    } catch (err) {
+      setCommentsError(err instanceof Error ? err.message : "Failed to load comments");
+    } finally {
+      setCommentsLoading(false);
     }
   };
 
@@ -84,28 +243,29 @@ export default function PostDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="text-gray-600 dark:text-gray-400">Loading post…</div>
+      <div className="min-h-screen bg-[var(--background)] flex items-center justify-center">
+        <div className="text-[var(--text-muted)]">Loading post…</div>
       </div>
     );
   }
 
   if (error || !post) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="text-gray-600 dark:text-gray-400">{error || "Post not found"}</div>
+      <div className="min-h-screen bg-[var(--background)] flex items-center justify-center">
+        <div className="text-[var(--text-muted)]">{error || "Post not found"}</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-2xl mx-auto p-4">
-        {/* Post card (Twitter-like) */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 mb-4">
+    <div className="min-h-screen bg-[var(--background)] pb-24 md:pb-0">
+      <AppHeader />
+      <AppShell>
+        {/* Post card */}
+        <Card padding="md" className="mb-4">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-700">
+              <div className="w-8 h-8 rounded-full overflow-hidden bg-[var(--card-hover-bg)]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={AvatarService.getAvatarUrl(post.user_id)}
@@ -118,7 +278,7 @@ export default function PostDetailPage() {
                   }}
                 />
               </div>
-              <span className="text-sm text-gray-500 dark:text-gray-400">{new Date(post.created_at).toLocaleString()}</span>
+              <span className="text-sm text-[var(--text-muted)]">{new Date(post.created_at).toLocaleString()}</span>
             </div>
             <div className="flex items-center gap-3">
               <button
@@ -136,7 +296,7 @@ export default function PostDetailPage() {
                     setLikes(prevLikes);
                   }
                 }}
-                className={`inline-flex items-center gap-1 px-2 py-1 rounded-md border ${liked ? "border-rose-300 text-rose-600 bg-rose-50 dark:bg-rose-900/20" : "border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"}`}
+                className={`inline-flex items-center gap-1 px-2 py-1 rounded-md border ${liked ? "border-rose-300 text-rose-600 bg-rose-50" : "border-[var(--border-color)] hover:bg-[var(--card-hover-bg)] text-[var(--text-secondary)]"}`}
               >
                 <svg
                   className={`w-4 h-4 ${liked ? "fill-current" : ""}`}
@@ -166,32 +326,121 @@ export default function PostDetailPage() {
             )}
             </div>
           </div>
-          {post.title && (
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-1">{post.title}</h1>
-          )}
-          {post.body && (
-            <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap mb-3">{post.body}</p>
-          )}
+          {post.title && (<h1 className="text-xl font-bold text-[var(--text-primary)] mb-1">{post.title}</h1>)}
+          {post.body && (<p className="text-[var(--text-secondary)] whitespace-pre-wrap mb-3">{post.body}</p>)}
           {post.image_url && (
-            <img
-              src={post.image_url}
-              alt="post"
-              className="w-full max-h-[32rem] object-cover rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer"
-              onClick={() => setPreviewUrl(post.image_url!)}
-            />
+            <img src={post.image_url} alt="post" className="w-full max-h-[32rem] object-cover rounded-lg border border-[var(--border-color)] cursor-pointer" onClick={() => setPreviewUrl(post.image_url!)} />
           )}
-        </div>
+        </Card>
 
-        {/* Comments placeholder */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Comments</h2>
+        <Card padding="none">
+          <div className="p-4 border-b border-[var(--border-color)]">
+            <h2 className="text-lg font-semibold text-[var(--text-primary)]">Comments</h2>
           </div>
-          <div className="p-4 text-gray-600 dark:text-gray-400">
-            Coming soon…
+          <div className="p-4">
+            <div className="flex gap-2 mb-4">
+              <div className="w-8 h-8 rounded-full overflow-hidden bg-[var(--card-hover-bg)] flex-none">
+                <img
+                  src={AvatarService.getAvatarUrl(AuthService.getUserId() || "0")}
+                  alt="me"
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    const target = e.currentTarget as HTMLImageElement;
+                    target.onerror = null;
+                    target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent("You")}&size=200&background=3b82f6&color=fff`;
+                  }}
+                />
+              </div>
+              <div className="flex-1">
+                <div className="flex gap-2">
+                  <input
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    onKeyDown={(e) => {
+                      if ((e as unknown as KeyboardEvent<HTMLInputElement>).key === "Enter") {
+                        e.preventDefault();
+                        if (!postId || !newComment.trim()) return;
+                        const text = newComment.trim();
+                        setNewComment("");
+                        CommentService.create(postId, { body: text })
+                          .then(reloadComments)
+                          .catch((err) => {
+                            setCommentsError(err instanceof Error ? err.message : "Failed to post comment");
+                          });
+                      }
+                    }}
+                    placeholder="Write a comment"
+                    className="flex-1 px-3 py-2 rounded-lg border border-[var(--border-color)] bg-[var(--card-hover-bg)] text-[var(--text-primary)]"
+                  />
+                  <button
+                    onClick={async () => {
+                      if (!postId || !newComment.trim()) return;
+                      const text = newComment.trim();
+                      setNewComment("");
+                      try {
+                        await CommentService.create(postId, { body: text });
+                        await reloadComments();
+                      } catch (err) {
+                        setCommentsError(err instanceof Error ? err.message : "Failed to post comment");
+                      }
+                    }}
+                    className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+                  >
+                    Post
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {commentsError && (
+              <div className="mb-3 text-sm text-red-600">{commentsError}</div>
+            )}
+            {commentsLoading ? (
+              <div className="text-[var(--text-muted)]">Loading…</div>
+            ) : comments.length === 0 ? (
+              <div className="text-[var(--text-muted)]">No comments yet</div>
+            ) : (
+              <ul className="space-y-4">
+                {comments.map((c) => (
+                  <CommentItem
+                    key={c.id}
+                    node={c}
+                    onReplyClick={(id) => {
+                      setReplyingTo((prev) => (prev === id ? null : id));
+                      setReplyText("");
+                    }}
+                    replyingTo={replyingTo}
+                    replyText={replyText}
+                    setReplyText={setReplyText}
+                    onSubmitReply={async (parentId, text) => {
+                      if (!postId || !text.trim()) return;
+                      try {
+                        await CommentService.create(postId, { body: text.trim(), parent_id: parentId });
+                        setReplyingTo(null);
+                        setReplyText("");
+                        await reloadComments();
+                      } catch (err) {
+                        setCommentsError(err instanceof Error ? err.message : "Failed to post reply");
+                      }
+                    }}
+                    currentUserId={AuthService.getUserId()}
+                    postOwnerId={post?.user_id || null}
+                    onDelete={async (commentId) => {
+                      if (!postId) return;
+                      try {
+                        await CommentService.delete(postId, commentId);
+                        await reloadComments();
+                      } catch (err) {
+                        setCommentsError(err instanceof Error ? err.message : "Failed to delete comment");
+                      }
+                    }}
+                  />
+                ))}
+              </ul>
+            )}
           </div>
-        </div>
-      </div>
+        </Card>
+      </AppShell>
       {isOwner && isEditOpen && (
         <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-6 w-full max-w-lg">

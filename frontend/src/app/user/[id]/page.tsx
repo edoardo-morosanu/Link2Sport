@@ -9,6 +9,8 @@ import { Event } from "@/types/event";
 import { EventService } from "@/services/event";
 import { eventToProfileActivity } from "@/types/profile";
 import { AppHeader } from "@/components/profile/AppHeader";
+import { AppShell } from "@/components/layout/AppShell";
+import { Card } from "@/components/ui/primitives/Card";
 import PublicProfileHeader from "@/components/profile/PublicProfileHeader";
 import { ProfileTabs } from "@/components/profile/ProfileTabs";
 import { PostsTab } from "@/components/profile/PostsTab";
@@ -221,12 +223,12 @@ export default function UserProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+    <div className="min-h-screen bg-[var(--background)] transition-colors duration-300 pb-24 md:pb-0">
       <AppHeader />
 
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm transition-colors duration-300">
-          <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+      <AppShell className="pt-8">
+        <Card padding="none">
+          <div className="p-6 border-b border-[var(--border-color)]">
             <div className="flex items-start justify-between">
               <div className="flex items-center space-x-4">
                 <div className="relative">
@@ -326,8 +328,7 @@ export default function UserProfilePage() {
           <ProfileTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
           <div className="p-6">{renderTabContent()}</div>
-        </div>
-
+        </Card>
         <FollowersModal
           isOpen={showFollowersModal}
           userId={profile.id}
@@ -349,7 +350,7 @@ export default function UserProfilePage() {
           }}
           showFollowButtons={true}
         />
-      </div>
+      </AppShell>
     </div>
   );
 }

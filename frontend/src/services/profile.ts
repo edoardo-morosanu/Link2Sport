@@ -26,6 +26,7 @@ export class ProfileService {
       }
       throw new Error(`Request failed with status ${response.status}`);
     }
+    if (response.status === 204) return null;
     return await response.json();
   }
 
@@ -86,6 +87,12 @@ export class ProfileService {
     return await this.makeAuthenticatedRequest(`${API_BASE_URL}/api/profile`, {
       method: "PUT",
       body: JSON.stringify(profileData),
+    });
+  }
+
+  static async deleteAccount(): Promise<void> {
+    await this.makeAuthenticatedRequest(`${API_BASE_URL}/api/profile`, {
+      method: "DELETE",
     });
   }
 }

@@ -14,7 +14,7 @@ func SetupProfileRoutes(router *gin.Engine, profileController *controllers.Profi
 	{
 		profileGroup.GET("/profile", profileController.GetProfile)
 		profileGroup.GET("/profile/:id", profileController.GetPublicProfile)
-
-		// profileGroup.PUT("/profile", profileController.UpdateProfile)
+		profileGroup.DELETE("/profile", profileController.DeleteAccount)
+		profileGroup.PUT("/profile", profileController.UpdateProfile)
 	}
 }

@@ -12,16 +12,16 @@ export function ProfileTabs({ activeTab, onTabChange }: ProfileTabsProps) {
   ];
 
   return (
-    <div className="border-b border-gray-200 dark:border-gray-700 transition-colors duration-300">
-      <nav className="flex px-6">
+    <div className="border-b border-[var(--border-color)] transition-colors duration-300">
+      <nav className="flex px-3 sm:px-6 gap-1 sm:gap-0 overflow-x-auto no-scrollbar">
         {tabs.map((tab) => (
           <button
             key={tab.key}
             onClick={() => onTabChange(tab.key)}
-            className={`flex-1 py-4 px-1 border-b-2 font-medium text-sm text-center ${
+            className={`flex-1 min-w-[5.5rem] sm:min-w-0 py-3 sm:py-4 px-2 border-b-2 font-medium text-xs sm:text-sm text-center ${
               activeTab === tab.key
-                ? "border-blue-500 text-blue-600 dark:text-blue-400"
-                : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
+                ? "border-blue-500 text-blue-600"
+                : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-color)]"
             } transition-colors duration-200`}
           >
             {tab.label}

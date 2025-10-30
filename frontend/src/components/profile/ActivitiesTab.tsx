@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useUserEvents } from "@/hooks/useEvents";
 import { CreateEventData } from "@/types/event";
 import { EventService } from "@/services/event";
@@ -22,6 +22,9 @@ export function ActivitiesTab({
   const { events, loading, error, refreshEvents } = useUserEvents();
   const [deletingEventId, setDeletingEventId] = useState<string | null>(null);
   const router = useRouter();
+  const [joiningId, setJoiningId] = useState<string | null>(null);
+  const [joinError, setJoinError] = useState<string | null>(null);
+  const [eventMetaMap, setEventMetaMap] = useState<Record<string, { is_participant: boolean; is_organizer: boolean; status: string; participants: number; capacity?: number }>>({});
 
   // Modal state for creating activities
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -33,6 +36,47 @@ export function ActivitiesTab({
     } catch (error) {
       throw error; // Let the modal handle the error
     }
+  };
+
+  // Load participation meta for provided activities (public profile view)
+  useEffect(() => {
+    if (!activities || activities.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const results = await Promise.allSettled(
+          activities.map((a) => EventService.getEvent(a.id))
+        );
+        const map: Record<string, { is_participant: boolean; is_organizer: boolean; status: string; participants: number; capacity?: number }> = {};
+        results.forEach((res, idx) => {
+          const id = activities[idx].id;
+          if (res.status === "fulfilled" && res.value) {
+            const e = res.value as any;
+            map[id] = {
+              is_participant: !!e.is_participant,
+              is_organizer: !!e.is_organizer,
+              status: e.status,
+              participants: e.participants,
+              capacity: e.capacity,
+            };
+          }
+        });
+        if (!cancelled) setEventMetaMap(map);
+      } catch {}
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activities]);
+
+  const canJoin = (meta?: { is_participant: boolean; is_organizer: boolean; status: string; participants: number; capacity?: number }) => {
+    if (!meta) return false;
+    return !meta.is_organizer && !meta.is_participant && meta.status === "upcoming" && (typeof meta.capacity !== "number" || meta.participants < (meta.capacity || 0));
+  };
+
+  const canLeave = (meta?: { is_participant: boolean; is_organizer: boolean; status: string }) => {
+    if (!meta) return false;
+    return meta.is_participant && !meta.is_organizer && meta.status !== "complete";
   };
 
   const handleDeleteEvent = async (eventId: string) => {
@@ -124,7 +168,7 @@ export function ActivitiesTab({
       <div className="space-y-6">
         {/* Activity Creation Button - Only show if not embedded */}
         {showCreateSection && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+          <div className="bg-[var(--card-bg)] rounded-xl border border-[var(--border-color)] p-4">
             <div className="flex items-center space-x-3 mb-4">
               <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
                 <svg
@@ -142,10 +186,10 @@ export function ActivitiesTab({
                 </svg>
               </div>
               <div className="flex-1">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                <h3 className="text-lg font-semibold text-[var(--text-primary)]">
                   Create New Activity
                 </h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <p className="text-sm text-[var(--text-muted)]">
                   Share a sports activity with the community
                 </p>
               </div>
@@ -153,9 +197,9 @@ export function ActivitiesTab({
 
             <button
               onClick={onCreateActivity || (() => setShowCreateModal(true))}
-              className="w-full p-4 text-left bg-gray-50 dark:bg-gray-700 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-blue-400 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+              className="w-full p-4 text-left bg-[var(--card-hover-bg)] rounded-lg border-2 border-dashed border-[var(--border-color)] hover:border-blue-400 hover:bg-[var(--card-bg)] transition-colors"
             >
-              <p className="text-gray-500 dark:text-gray-400">
+              <p className="text-[var(--text-muted)]">
                 What activity are you organizing? Click to get started...
               </p>
             </button>
@@ -169,14 +213,14 @@ export function ActivitiesTab({
             activities.map((activity) => (
               <div
                 key={activity.id}
-                className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 transition-all duration-200 hover:shadow-md cursor-pointer"
+                className="bg-[var(--card-bg)] rounded-xl border border-[var(--border-color)] p-6 transition-all duration-200 hover:shadow-md cursor-pointer"
                 onClick={() => router.push(`/activity/${activity.id}`)}
                 title="Open activity"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center space-x-3 mb-3">
-                      <h3 className="font-semibold text-xl text-gray-900 dark:text-white">
+                      <h3 className="font-semibold text-xl text-[var(--text-primary)]">
                         {activity.title}
                       </h3>
                       <span className="text-sm px-3 py-1 bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 rounded-full capitalize">
@@ -187,11 +231,11 @@ export function ActivitiesTab({
                       {activity.sport}
                     </p>
                     {activity.description && (
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 leading-relaxed">
+                      <p className="text-sm text-[var(--text-secondary)] mb-3 leading-relaxed">
                         {activity.description}
                       </p>
                     )}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-500 dark:text-gray-400 mb-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-[var(--text-muted)] mb-3">
                       <div className="flex items-center space-x-2">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3a2 2 0 012-2h4a2 2 0 012 2v4m-6 0V6a2 2 0 012-2h4a2 2 0 012 2v1m-6 0a2 2 0 002 2h4a2 2 0 002-2m-6 0h6a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V9a2 2 0 012-2z" />
@@ -207,7 +251,70 @@ export function ActivitiesTab({
                       </div>
                     </div>
                   </div>
+                  <div className="flex items-center gap-2 ml-4">
+                    {canLeave(eventMetaMap[activity.id]) && (
+                      <button
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          setJoinError(null);
+                          try {
+                            setJoiningId(activity.id);
+                            await EventService.leaveEvent(activity.id);
+                            setEventMetaMap((m) => ({
+                              ...m,
+                              [activity.id]: {
+                                ...m[activity.id],
+                                is_participant: false,
+                                participants: Math.max(0, (m[activity.id]?.participants || 1) - 1),
+                              },
+                            }));
+                          } catch (err) {
+                            setJoinError(err instanceof Error ? err.message : "Failed to leave activity");
+                          } finally {
+                            setJoiningId(null);
+                          }
+                        }}
+                        disabled={joiningId === activity.id}
+                        className="px-3 py-1 text-xs rounded-md border border-[var(--border-color)] hover:bg-[var(--card-hover-bg)] text-[var(--text-secondary)] disabled:opacity-60"
+                        title="Leave activity"
+                      >
+                        {joiningId === activity.id ? "Leaving..." : "Leave"}
+                      </button>
+                    )}
+                    {canJoin(eventMetaMap[activity.id]) && (
+                      <button
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          setJoinError(null);
+                          try {
+                            setJoiningId(activity.id);
+                            await EventService.joinEvent(activity.id);
+                            setEventMetaMap((m) => ({
+                              ...m,
+                              [activity.id]: {
+                                ...m[activity.id],
+                                is_participant: true,
+                                participants: (m[activity.id]?.participants || 0) + 1,
+                              },
+                            }));
+                          } catch (err) {
+                            setJoinError(err instanceof Error ? err.message : "Failed to join activity");
+                          } finally {
+                            setJoiningId(null);
+                          }
+                        }}
+                        disabled={joiningId === activity.id}
+                        className="px-3 py-1 text-xs rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
+                        title="Join activity"
+                      >
+                        {joiningId === activity.id ? "Joining..." : "Join"}
+                      </button>
+                    )}
+                  </div>
                 </div>
+                {joinError && (
+                  <div className="mt-2 text-sm text-red-600">{joinError}</div>
+                )}
               </div>
             ))
           ) : !events || events.length === 0 ? (
@@ -221,7 +328,7 @@ export function ActivitiesTab({
             events.map((event) => (
               <div
                 key={event.id}
-                className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 transition-all duration-200 hover:shadow-md cursor-pointer"
+                className="bg-[var(--card-bg)] rounded-xl border border-[var(--border-color)] p-6 transition-all duration-200 hover:shadow-md cursor-pointer"
                 onClick={() => router.push(`/activity/${event.id}`)}
                 title="Open activity"
               >
@@ -229,7 +336,7 @@ export function ActivitiesTab({
                   <div className="flex-1">
                     {/* Header with title and badges */}
                     <div className="flex items-center space-x-3 mb-3">
-                      <h3 className="font-semibold text-xl text-gray-900 dark:text-white">
+                      <h3 className="font-semibold text-xl text-[var(--text-primary)]">
                         {event.title}
                       </h3>
                       <span className="text-sm px-3 py-1 bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 rounded-full">
@@ -318,7 +425,7 @@ export function ActivitiesTab({
                     </div>
 
                     {event.end_at && (
-                      <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400 mb-3">
+                      <div className="flex items-center space-x-2 text-sm text-[var(--text-muted)] mb-3">
                         <svg
                           className="w-4 h-4"
                           fill="none"

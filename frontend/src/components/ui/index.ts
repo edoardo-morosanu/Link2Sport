@@ -1,4 +1,5 @@
 export { default as DateTimePicker } from "./DateTimePicker";
 export { default as TimePicker } from "./TimePicker";
-export { default as AvatarUpload } from "./AvatarUpload";
-export { default as MapTilerLocationPicker } from "./MapTilerLocationPicker";
+export { AvatarUpload } from "./AvatarUpload";
+export { MapTilerLocationPicker } from "./MapTilerLocationPicker";
+export { ThemeToggle } from "./ThemeToggle";
