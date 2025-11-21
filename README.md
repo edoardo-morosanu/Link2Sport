@@ -1,7 +1,6 @@
 # Link2Sport - Sports Event Management System
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Go](https://github.com/edoardo-morosanu/Link2Sport/actions/workflows/go.yml/badge.svg)](https://github.com/edoardo-morosanu/Link2Sport/actions/workflows/go.yml)
 
 Link2Sport is a modern web application designed to connect sports enthusiasts, enabling them to create, join, and manage sports events in their local communities. Built with a microservices architecture, it provides a seamless experience for users to discover and participate in various sporting activities.
 
